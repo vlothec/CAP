@@ -1,0 +1,18 @@
+# environment.yml
+name: cap-pipeline
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - r-base=4.3
+  - r-tidyverse
+  - r-optparse
+  - r-ggplot2
+  - r-data.table
+  - python=3.11
+  - pandas
+  - scikit-learn
+  - mafft
+  - hmmer
+  - git
