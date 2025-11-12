@@ -12,6 +12,8 @@ dependencies:
   - r-data.table
   - python=3.11
   - pandas
+  - joblib
+  - xgboost
   - scikit-learn
   - mafft
   - hmmer

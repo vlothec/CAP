@@ -17,11 +17,12 @@ suppressMessages({library(seqinr)
                   library(msa)})
 
 # Load additional functions
-source("./aux_fun.R")
+source(file.path(Sys.getenv("WORKFLOW_DIR"), "bin", "aux.R"))
 
 # Load data 
 
 # --- Your parsing code here ---
+parsed_data <- data.frame()
 
 # Save output
 write.csv(parsed_data, file = output_genes_parsed, row.names = FALSE)  # Assuming parsed_data is created in your code

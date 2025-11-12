@@ -17,9 +17,10 @@ suppressMessages({library(seqinr)
                   library(msa)})
 
 # Load additional functions
-source("./aux_fun.R")
+source(file.path(Sys.getenv("WORKFLOW_DIR"), "bin", "aux.R"))
 
 # Load data 
+parsed_data <- data.frame()
 
 
 # --- Your parsing code here ---
