@@ -24,7 +24,7 @@ suppressMessages({library(seqinr)
                   library(msa)})
 
 # Load additional functions
-source(file.path(Sys.getenv("WORKFLOW_DIR"), "bin", "aux.R"))
+source(file.path(Sys.getenv("WORKFLOW_DIR"), "bin", "auxfuns.R"))
 
 # Merging
 {

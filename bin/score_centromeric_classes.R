@@ -26,7 +26,7 @@ suppressMessages({library(seqinr)
                   library(GenomicRanges)})
 
 # Load additional functions
-source(file.path(Sys.getenv("WORKFLOW_DIR"), "bin", "aux.R"))
+source(file.path(Sys.getenv("WORKFLOW_DIR"), "bin", "auxfuns.R"))
 
 # Load required data
 # print("load repeats")
