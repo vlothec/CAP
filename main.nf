@@ -18,13 +18,22 @@ process CHECK_DEPS {
 	output:
     val true
     script:
-    """
+     """
     echo "Checking for nhmmer:"
-    which nhmmer || { echo "ERROR: nhmmer not found in PATH"; exit 1; }
-    nhmmer -h | head -n 3
+    if ! command -v nhmmer &> /dev/null; then
+        echo "❌ nhmmer not found in PATH"; exit 1;
+    else
+        nhmmer -h 2>&1 | head -n 3 || true
+    fi
+
     echo "Checking for mafft:"
-    which mafft || { echo "ERROR: mafft not found in PATH"; exit 1; }
-    mafft -h | head -n 3
+    if ! command -v mafft &> /dev/null; then
+        echo "❌ mafft not found in PATH"; exit 1;
+    else
+        mafft --version 2>&1 || true
+    fi
+
+    echo "✅ All dependencies found."
     """
 }
 
