@@ -14,7 +14,8 @@ output_ctw <- args[2]
 
 # Load libraries
 suppressMessages({library(seqinr)
-                  library(msa)})
+                  library(msa)
+                  library(BCT)})
 
 # Load additional functions
 source(file.path(Sys.getenv("WORKFLOW_DIR"), "bin", "auxfuns.R"))
@@ -38,7 +39,7 @@ for(i in seq_along(fasta)) {
   len <- metadata_data$size[i]
   
   
-  bins <- round(len / bin_edta)
+  bins <- max(1, round(len / bin_edta))
   bin_size <- len / bins
   window.starts.CTW = round((0 : bins) * bin_size)
   window.ends.CTW <- window.starts.CTW[-1]
@@ -47,11 +48,12 @@ for(i in seq_along(fasta)) {
   log2e <- log(2,base=exp(1))
   CTW.values <- unlist(CTW.values)
   CTW.values = CTW.values * -log2e
-  CTW.values <- CTW.values / (bin_edta - 10)
+  actual_bin_sizes <- window.ends.CTW - window.starts.CTW + 1
+  CTW.values <- CTW.values / (actual_bin_sizes - 10)
   CTW.values[CTW.values > 1] = 1
   CTW.values[CTW.values < 0] = 0
   CTW.values = CTW.values * 100
-  
+  mids <- (window.starts.CTW + window.ends.CTW) / 2
   mids <- window.starts.CTW + bin_edta/2
   
   ctw_data <- rbind(ctw_data, data.frame(chromosome = rep(metadata_data$chromosome.name[i], length(mids)),
@@ -61,7 +63,5 @@ for(i in seq_along(fasta)) {
 }
 
 
-# --- Your CTW computation code here ---
-
 # Save output
-write.csv(ctw_data, file = output_ctw, row.names = FALSE)  # Assuming ctw_data is created in your code
+write.csv(ctw_data, file = output_ctw, row.names = FALSE)

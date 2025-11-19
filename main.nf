@@ -11,6 +11,8 @@ params.gene_gff = null
 params.cores = 1
 params.max_rep_size = 200
 params.outdir = "./results"
+params.TRASH2 = null   // <-- new: directory containing TRASH2 output files (full paths)
+params.trash2 = null   // <-- accept lower-case variant too
 
 // ────────────────── CHECK DEPENDANCIES ──────────────────
 process CHECK_DEPS {
@@ -41,23 +43,20 @@ process CHECK_DEPS {
 
 // ──────────────────────── TRASH2 ────────────────────────
 process TRASH2 {
-	publishDir "${params.outdir}", mode: 'copy'
+    publishDir "${params.outdir}", mode: 'copy'
     tag "TRASH2 on ${assembly.baseName}"
     cpus params.cores
 
     input:
     tuple (path(assembly), val(templates))
-	val ready
+    val ready
 
-	when:
-	ready
-	
     output:
     tuple (path("${assembly.name}_repeats_with_seq.csv"),
           path("${assembly.name}_arrays.csv"))
-		  
+          
     script:
-	def t = params.templates ? "-t ${params.templates}" : ''
+    def t = params.templates ? "-t ${params.templates}" : ''
     """
     echo "Running TRASH2 with output dir: \$PWD"
     ${workflow.projectDir}/modules/TRASH_2/src/TRASH.R -f ${assembly} -o \$PWD \
@@ -117,8 +116,8 @@ process PARSE_TES {
     input:
     path te_gff
     output:
-    path "${te_gff.name}_TEs_parsed.csv"
-	
+    path "${te_gff.baseName}_TEs_parsed.csv"
+    
     script:
     """
     Rscript ${workflow.projectDir}/bin/parse_TEs.R ${te_gff} ${te_gff.baseName}_TEs_parsed.csv
@@ -128,11 +127,13 @@ process PARSE_TES {
 process FILTER_TES {
     input:
     path parsed
+    path arrays_filtered
+    path metadata
     output:
     path "${parsed.baseName}_filtered.csv"
     script:
     """
-    Rscript ${workflow.projectDir}/bin/filter_TEs.R ${parsed} ${parsed.baseName}_filtered.csv
+    Rscript ${workflow.projectDir}/bin/filter_TEs.R ${parsed} ${arrays_filtered} ${metadata} ${parsed.baseName}_filtered.csv
     """
 }
 
@@ -141,7 +142,7 @@ process PARSE_GENES {
     input:
     path gene_gff
     output:
-    path "${gene_gff.name}_genes_parsed.csv"
+    path "${gene_gff.baseName}_genes_parsed.csv"
  
     script:
     """
@@ -152,11 +153,13 @@ process PARSE_GENES {
 process FILTER_GENES {
     input:
     path parsed
+    path arrays_filtered
+    path metadata
     output:
     path "${parsed.baseName}_filtered.csv"
     script:
     """
-    Rscript ${workflow.projectDir}/bin/filter_genes.R ${parsed} ${parsed.baseName}_filtered.csv
+    Rscript ${workflow.projectDir}/bin/filter_genes.R ${parsed} ${arrays_filtered} ${metadata} ${parsed.baseName}_filtered.csv
     """
 }
 
@@ -230,10 +233,10 @@ process CAP {
     publishDir "${params.outdir}", mode: 'copy'
 	
     input:
-    path assembly
     path predictions
     tuple path(repeats_r), path(arrays_r), path(genome_classes)
     path metadata
+    path assembly
     val te_f // optional
     val gene_f // optional
     path gc_ch
@@ -258,12 +261,12 @@ process CAP {
 
 // ────────────────────── WORKFLOW ──────────────────────
 workflow {
-	
+    
 // ────────────────────── HELP MESSAGE ──────────────────────
 if (!params.assembly) {
     def help = """
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║ CAP - Centromere Analysis Pipeline ║
+║ CAP - Centromere Analysis Pipeline                                           ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 Required:
   --assembly <path> Genome assembly in FASTA format
@@ -271,6 +274,7 @@ Optional:
   --te_gff <path> EDTA TE annotation (GFF3)
   --gene_gff <path> Helixer gene annotation (GFF)
   --templates <path> Custom repeat templates (FASTA)
+  --TRASH2 <dir>  Use precomputed TRASH2 outputs stored in <dir> (skip TRASH2 execution)
   --cores <int> Number of CPU cores [default: ${params.cores}]
   --outdir <path> Output directory [default: ${params.outdir}]
 ────────────────────────────────────────────────────────────────────────────────
@@ -314,31 +318,52 @@ nextflow run main.nf -profile renv \\
 See README.md for full details: https://github.com/vlothec/CAP
 """
     println help
-	System.exit(0)
+    System.exit(0)
 }
 
-	ready_ch = CHECK_DEPS()
-	// Input channels
+    ready_ch = CHECK_DEPS()
+    // Input channels
     assembly_ch = channel.fromPath(params.assembly, checkIfExists: true)
     //templates_ch = params.templates ? channel.fromPath(params.templates) : channel.value(null)
     te_gff_ch = params.te_gff ? channel.fromPath(params.te_gff) : channel.value(null)
     gene_gff_ch = params.gene_gff ? channel.fromPath(params.gene_gff) : channel.value(null)
 
-	// ---- TRASH2 chain ----
-	trash_in = assembly_ch.map { assembly ->
-    def t = params.templates ? file(params.templates) : null
-    tuple(assembly, t)
-	}
-	trash_out = TRASH2(trash_in, ready_ch)
+    // ---- TRASH2 chain ----
+    // If user supplied a directory with TRASH2 outputs, skip running TRASH2 and
+    // use the files found there. Accept --TRASH2 or --trash2.
+    def trash2_dir = params.TRASH2 ?: params.trash2
+    if (trash2_dir) {
+        trash_out = assembly_ch.map { assembly ->
+            def base = assembly.baseName
+            def dir = file(trash2_dir)
+            def repeats = file("${dir}/${base}_repeats_with_seq.csv")
+            def arrays  = file("${dir}/${base}_arrays.csv")
+            if (!repeats.exists() || !arrays.exists()) {
+                throw new IllegalArgumentException("TRASH2 outputs not found for ${base} in ${trash2_dir}: expected ${repeats} and ${arrays}")
+            }
+            tuple(repeats, arrays)
+        }
+    } else {
+        trash_in = assembly_ch.map { assembly ->
+            def t = params.templates ? file(params.templates) : null
+            tuple(assembly, t)
+        }
+        trash_out = TRASH2(trash_in, ready_ch)
+    }
+
     filtered = FILTER_TRASH(trash_out)
     reclassed = MERGE_CLASSES(filtered)
+
+    // extract arrays_filtered file from the tuple emitted by FILTER_TRASH
+    arrays_ch = filtered.map { repeats, arrays -> arrays }
 
     metadata = GET_METADATA(assembly_ch)
 
     // ---- Optional TEs ----
     if (params.te_gff) {
         te_parsed = PARSE_TES(te_gff_ch)
-        te_filtered = FILTER_TES(te_parsed)
+        // pass parsed TEs + arrays_filtered + metadata into FILTER_TES
+        te_filtered = FILTER_TES(te_parsed, arrays_ch, metadata)
     } else {
         te_filtered = channel.of('NO_FILE')
     }
@@ -346,7 +371,8 @@ See README.md for full details: https://github.com/vlothec/CAP
     // ---- Optional Genes ----
     if (params.gene_gff) {
         gene_parsed = PARSE_GENES(gene_gff_ch)
-        gene_filtered = FILTER_GENES(gene_parsed)
+        // pass parsed genes + arrays_filtered + metadata into FILTER_GENES
+        gene_filtered = FILTER_GENES(gene_parsed, arrays_ch, metadata)
     } else {
         gene_filtered = channel.of('NO_FILE')
     }
@@ -360,5 +386,5 @@ See README.md for full details: https://github.com/vlothec/CAP
     ctw = CTW(assembly_ch)
 
     // ---- Final visualisation ----
-    CAP(assembly_ch, preds, reclassed, metadata, te_filtered, gene_filtered, gc, ctw, scores)
+    CAP(preds, reclassed, metadata, assembly_ch, te_filtered, gene_filtered, gc, ctw, scores)
 }

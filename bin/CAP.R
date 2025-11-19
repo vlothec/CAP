@@ -6,22 +6,22 @@
 # Parse command-line arguments
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 9 || length(args) > 11) {
-  stop("Usage: CAP.R <predictions.csv> <repeats_reclassed.csv> <arrays_reclassed.csv> <genome_classes.csv> <metadata.csv> <assembly_name> <GC> <CTW> [<TEs_filtered.csv>] [<genes_filtered.csv>]")
+  stop("Usage: CAP.R <predictions.csv> <repeats_reclassed.csv> <arrays_reclassed.csv> <genome_classes.csv> <metadata.csv> <assembly_name> <GC> <CTW> [<TEs_filtered.csv>] [<genes_filtered.csv>] [<scores.csv>]")
 }
 no_edta <- FALSE
 no_heli <- FALSE
 
-predictions_csv <- args[1]
+predictions_csv <- args[1] # ML predictions to match scores_csv
 repeats_reclassed_csv <- args[2]
 arrays_reclassed_csv <- args[3]
-genome_classes_csv <- args[4]
+genome_classes_csv <- args[4] # individual classes
 metadata_csv <- args[5]
 assembly_name <- basename(args[6])
 gc_csv <- basename(args[7])
 ctw_csv <- basename(args[8])
 tes_filtered_csv <- if (args[9] != "NO_FILE") args[9] else no_edta <- TRUE
 genes_filtered_csv <- if (args[10] != "NO_FILE") args[10] else no_heli <- TRUE
-scores_csv <- basename(args[11])
+scores_csv <- basename(args[11]) # scores per class per chromosome
 
 
 # Load libraries
@@ -52,10 +52,6 @@ scores_data <- read.csv(scores_csv)
 print("load extra")
 if (!no_edta) tes_data <- read.csv(tes_filtered_csv)
 if (!no_heli) genes_data <- read.csv(genes_filtered_csv)
-
-
-
-
 
 
 
@@ -155,37 +151,6 @@ for(j in seq_along(chromosomes)) {
 scores <- cbind(scores_data, predictions_data)
 
 if (nrow(scores)) {
-  scores <- scores[order(scores$chromosome), ]
-  # ---- rescoring (unchanged logic) ---------------------------------
-  rescoring <- function(df) {
-    size_norm <- df$total_bp / max(df$total_bp)
-    size_norm <- size_norm + (1 - size_norm) / 1.5
-    df$score_total <- 0
-    
-    add <- function(col, cap, w) {
-      v <- pmin(df[[col]], cap); v[v < 0] <- 0
-      df$score_total <<- df$score_total + (v / cap) * w * size_norm
-    }
-    add("total_bp_norm_chr",        0.1, 2)
-    add("total_bp_norm_rep",        0.5, 1)
-    add("start_sd_norm_chr",        0.15, 1)
-    add("start_norm_chr_0_50",      0.25, 1)
-    add("gaps_with_TEs_fraction",   0.75, 0.5)
-    add("centre_array_edit",        20, 2)
-    add("centre_array_width_sd",    20, 2)
-    add("centre_chromosome_edit",   15, 1)
-    add("centre_chromosome_width_sd",15, 1)
-    
-    df$TE_prox_score   <- with(df, abs(TE_lm_coef) / (1 + TE_prox_dist + TE_prox_SD) * 100)
-    df$gene_prox_score <- with(df, abs(gene_lm_coef) / (1 + gene_prox_dist + gene_prox_SD) * 100)
-    add("TE_prox_score",   5, 5)
-    add("gene_prox_score", 5, 5)
-    
-    df
-  }
-  scores <- do.call(rbind, by(scores, scores$chromosome, rescoring))
-  scores <- scores[, -1]
-  
   scores$ed_perc <- 100 * scores$centre_array_edit / scores$mean_length
   scores$width_sd_perc <- 100 * scores$centre_array_width_sd / scores$mean_length
   scores$ed_perc[scores$ed_perc < 0] = NA
@@ -198,22 +163,20 @@ if (nrow(scores)) {
 #  SELECT CLASSES TO PLOT (top-scoring, >=5 kbp, <=20)
 # ------------------------------------------------------------------ #
 
-classes_to_plot <- if (nrow(scores)) {
-  filter_top_classes <- function(s, c) {
-    top <- do.call(rbind, by(s, s$chromosome, function(df) {
-      df <- df[order(df$score_total, decreasing = TRUE), ]
-      df <- df[df$score_total >= 3, ]
-      if (nrow(df) > 4) df <- df[1:4, ]
-      df$total_genome_bp <- c$sum_coverage[match(df$class, c$class)]
-      df[df$total_genome_bp >= 5000, ]
-    }))
-    c$to_plot <- c$class %in% top$class
-    c <- c[c$to_plot, ]
-    if (nrow(c) > 20) c <- c[1:20, ]
-    c
+classes_to_plot <- NULL
+if(nrow(scores)) {
+  scores <- scores[order(scores$probability_centromeric, decreasing = TRUE), ]
+  # scores <- scores[scores$probability_centromeric >= 0.01, ] # optional filtering
+  for(j in unique(scores$chromosome)) {
+    chr_scores <- scores[scores$chromosome == j, ]
+    if(nrow(chr_scores) == 0) next
+    if(nrow(chr_scores) > 4) chr_scores <- chr_scores[1:4, ]
+    classes_to_plot <- c(classes_to_plot, chr_scores$class[seq_len(min(4, nrow(chr_scores)))])
   }
-  filter_top_classes(scores, classes)
-} else classes[FALSE, ]
+} 
+cat("Classes to plot:", classes_to_plot, "\n")
+  
+
 
 
 
@@ -229,23 +192,11 @@ suffix <- paste0(
 # ------------------------------------------------------------------ #
 #  PLOTS LOOP SETUP
 # ------------------------------------------------------------------ #
+cat("Plotting. plots to complete:", length(chromosomes_sets), "\n")
 
 for(k in 1 : length(chromosomes_sets)) {
   
   plot_name <- file.path(paste0(assembly_name, "_CAP_plot_", k, "_", suffix, ".png"))
-  
-  
-  # if (file.exists(plot_name)) {
-  #   if(rerun_if_completed) {
-  #     message("Plot exists: ", plot_name, ", removing and plotting again")
-  #     file.remove(plot_name)
-  #   } else {
-  #     message("Plot exists: ", plot_name, ", moving on, use --rerun to remove existing and plot again")
-  #     next
-  #   }
-  #   
-  # }
-  
   
   chromosomes <- chromosomes_sets[[k]]
   chromosomes_len <- chromosomes_len_sets[[k]]
@@ -320,8 +271,10 @@ for(k in 1 : length(chromosomes_sets)) {
   # ------------------------------------------------------------------ #
   #  PER-CHROMOSOME LOOP
   # ------------------------------------------------------------------ #
+
   for (j in seq_along(chromosomes)) {
-    chr <- chromosomes[j]; len <- chromosomes_len[j]
+    chr <- chromosomes[j]
+    len <- chromosomes_len[j]
     rep_chr <- subset(repeats, seqID == chr)
     edt_chr <- if (!no_edta) subset(edta, V1 == chr) else data.frame()
     gen_chr <- if (!no_heli) subset(genes, V1 == chr) else data.frame()
@@ -341,11 +294,11 @@ for(k in 1 : length(chromosomes_sets)) {
     # === TABLE ===
     if (nrow(scores)) {
       sc <- subset(scores, chromosome == chr)[, c("class","count","mean_length","total_bp",
-                                                  "ed_perc","width_sd_perc","score_total")]
+                                                  "ed_perc","width_sd_perc","probability_centromeric")]
       sc[, 3:7] <- round(sc[, 3:7], 2)
-      sc$colours <- palette[match(sc$class, classes_to_plot$class)]
+      sc$colours <- palette[match(sc$class, classes_to_plot)]
       create_table(sc[,1:7], c("Class","Repeats no","Mean width, bp","Total bp",
-                               "Sequence similarity %","Width similarity %","Centromeric score"),
+                               "Sequence similarity %","Width similarity %","Cen probability"),
                    colours = sc$colours)
     } else plot.new()
     
@@ -375,9 +328,9 @@ for(k in 1 : length(chromosomes_sets)) {
     
     
     # Families
-    if (nrow(classes_to_plot)) {
-      for (k in seq_len(nrow(classes_to_plot))) {
-        fam <- subset(rep_chr, new_class == classes_to_plot$class[k])
+    if (length(classes_to_plot)) {
+      for (k in seq_len(length(classes_to_plot))) {
+        fam <- subset(rep_chr, new_class == classes_to_plot[k])
         if (!nrow(fam)) next
         cov <- calculate.repeats.percentage.in.windows(win_rep, fam$start, fam$width, len)
         cov[cov == 0] <- NA; cov[cov > 100] <- 100
@@ -424,17 +377,17 @@ for(k in 1 : length(chromosomes_sets)) {
       mtext("      TE+REP dens per 100 Kbp", side = 2, line = 2, col = "#0066aa", cex = 0.5, at = 20, adj = 0)
     }
     
-    # HiC
-    if (lookup_and_plot_hic) {
-      hic_f <- hic_files[grepl(gsub("\\|","_", chr), hic_files)]
-      if (length(hic_f)) {
-        hic <- read.table(hic_f, header = TRUE, sep = "\t")
-        par(new = TRUE)
-        plot(hic$Bin_Midpoint_BP, hic$Std_Dev_Interchrom_Contacts,
-             type="b", col="#bb3300", lwd=4, yaxt="n", xlab="", ylab="")
-        mtext("      HiC normalised signal", side = 2, line = 4, col = "#bb3300", cex = 0.5, at = 20, adj = 0)
-      }
-    }
+    # # HiC
+    # if (lookup_and_plot_hic) {
+    #   hic_f <- hic_files[grepl(gsub("\\|","_", chr), hic_files)]
+    #   if (length(hic_f)) {
+    #     hic <- read.table(hic_f, header = TRUE, sep = "\t")
+    #     par(new = TRUE)
+    #     plot(hic$Bin_Midpoint_BP, hic$Std_Dev_Interchrom_Contacts,
+    #          type="b", col="#bb3300", lwd=4, yaxt="n", xlab="", ylab="")
+    #     mtext("      HiC normalised signal", side = 2, line = 4, col = "#bb3300", cex = 0.5, at = 20, adj = 0)
+    #   }
+    # }
     
     # Gene valley
     if (!no_heli && nrow(gen_chr)) {
@@ -462,18 +415,13 @@ for(k in 1 : length(chromosomes_sets)) {
 # ------------------------------------------------------------------ #
 #  DOT-PLOT & FINAL TABLE
 # ------------------------------------------------------------------ #
+
 if(T) {
+  classes_to_plot <- data.frame(class = classes_to_plot,
+                                consensus = classes$consensus[match(classes_to_plot, classes$class)],
+                                count = classes$count[match(classes_to_plot, classes$class)],
+                                stringsAsFactors = FALSE)
   
-  # if (nrow(classes_to_plot)) {
-  #   # plot_name <- output_cap_plot
-  #   plot_name <- file.path(paste0("repeat_total_table_", assembly_name, ".png"))
-  #   png(plot_name, width = 3000, height = 200 + 100 * nrow(classes_to_plot))
-  #   create_table(classes_to_plot[, c("class","count","median_length","sum_coverage")],
-  #                c("Class","Repeats no","Median width", "Total width"),
-  #                colours = palette[1:nrow(classes_to_plot)], font_size = 4)
-  #   dev.off()
-  #   message("DONE: ", plot_name)
-  # }
   classes_to_plot$colour <- palette[1:nrow(classes_to_plot)]
   classes_to_plot <- classes_to_plot[classes_to_plot$count > 50, ]
   
@@ -507,7 +455,8 @@ if(T) {
 }
 
 
-
+write.csv(classes_to_plot, file = file.path(paste0(assembly_name, "_CAP_repeat_families.csv")), row.names = FALSE)
+write.csv(classes_to_plot, file = file.path(paste0(assembly_name, "_CAP_model.txt")), row.names = FALSE)
 
 
 
