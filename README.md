@@ -44,13 +44,16 @@ Output: *[fasta_file]_genes_filtered.csv*
 
 8. /bin/score_centromeric_classes.R 
 Inputs: 
-	Required: *[fasta_file]_repeats_filtered_reclassed.csv*, *_arrays_filtered_reclassed.csv*, *[fasta_file]_genome_classes.csv*
-	Optional: *[fasta_file]_TEs_filtered.csv*, *[fasta_file]_genes_filtered.csv*
+	Required: *[fasta_file]_repeats_filtered_reclassed.csv*, 
+			  *_arrays_filtered_reclassed.csv*, 
+			  *[fasta_file]_genome_classes.csv*
+	Optional: *[fasta_file]_TEs_filtered.csv*, 
+			  *[fasta_file]_genes_filtered.csv*
 Output: *[fasta_file]_centromeric_scores.csv*
 
 9. /bin/predict_centromeric.py
 Inputs: 
-	Required: *[fasta_file]_centromeric_scores.csv*
+	Required: *[fasta_file]_centromeric_scores.csv*, *[fasta_file]_metadata.csv*
 	Additional model input: /model/centromeric_model_v2.pkl <- provided in the repository 
 Output: *[fasta_file]_predictions.csv*
 
@@ -66,9 +69,24 @@ Output: *[fasta_file]_CTW.csv*
 
 12. /bin/CAP.R 
 Inputs:
-	Required: *[fasta_file]_predictions.csv*, *[fasta_file]_repeats_filtered_reclassed.csv*, *_arrays_filtered_reclassed.csv*, *[fasta_file]_genome_classes.csv*
-	Optional: *[fasta_file]_TEs_filtered.csv*, *[fasta_file]_genes_filtered.csv*
-Output: *[fasta_file]_CAP_plot.png*, *[fasta_file]_CAP_repeat_families.csv*, *[fasta_file]_CAP_dotplot.png*, *[fasta_file]_CAP_model.txt*
+	Required: *[fasta_file]_predictions.csv*, 
+			  *[fasta_file]_repeats_filtered_reclassed.csv*, 
+			  *[fasta_file]_arrays_filtered_reclassed.csv*, 
+			  *[fasta_file]_genome_classes.csv*,
+			  *[fasta_file]_metadata.csv*
+	Optional: *[fasta_file]_TEs_filtered.csv*, 
+			  *[fasta_file]_genes_filtered.csv*
+Output: *[fasta_file]_CAP_plot.png*, 
+		*[fasta_file]_CAP_repeat_families.csv*, 
+		*[fasta_file]_CAP_dotplot.png*, 
+		*[fasta_file]_CAP_model.txt*
+		
+		
+11. /bin/get_metadata.R
+Inputs:
+	Required: *assembly.fasta*
+Output: *[fasta_file]_metadata.csv*
+
 
 
 sudo apt update && sudo apt install -y \
@@ -106,19 +124,17 @@ Choose **one** of the three methods below.
 
 ---
 
-### Option 1: Docker (Recommended – HPC, macOS, Windows)
+### Option 1: Docker
 
 ```bash
 # Pull and run
 nextflow run yourname/cap-pipeline -profile docker --assembly data/genome.fasta
 ```
 
-> No local installation needed.  
-> Works on **HPC with Singularity**, **macOS**, **Windows + Docker Desktop**.
 
 ---
 
-### Option 2: Conda (Linux, macOS, WSL)
+### Option 2: Conda
 
 ```bash
 git clone https://github.com/yourname/CAP.git
@@ -132,12 +148,10 @@ conda activate cap-pipeline
 nextflow run . -profile conda --assembly data/genome.fasta
 ```
 
-> Full dependency management.  
-> Ideal for **local development** and **WSL**.
 
 ---
 
-### Option 3: R + renv (Lightweight, R-only)
+### Option 3: R + renv
 
 ```bash
 git clone https://github.com/yourname/CAP.git
@@ -149,9 +163,6 @@ R -e 'renv::restore()'
 # Run
 nextflow run . -profile renv --assembly data/genome.fasta
 ```
-
-> Only installs R packages.  
-> Requires **R ≥ 4.3** and **Nextflow** installed.
 
 ---
 
@@ -220,16 +231,6 @@ Run:
 ```bash
 nextflow run . -profile docker,hpc --assembly genome.fasta
 ```
-
----
-
-## Testing
-
-```bash
-nextflow run . -profile test,conda
-```
-
-Uses `test/sample.fasta` and checks all steps.
 
 ---
 
