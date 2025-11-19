@@ -8,20 +8,17 @@ args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 5 || length(args) > 7) {
   stop("Usage: score_centromeric_classes.R <repeats_reclassed.csv> <arrays_reclassed.csv> <genome_classes.csv> <metadata.csv> [<TEs_filtered.csv>] [<genes_filtered.csv>] <output_centromeric_scores.csv>")
 }
+no_edta <- FALSE
+no_heli <- FALSE
 
 repeats_reclassed_csv <- args[1]
 arrays_reclassed_csv <- args[2]
 genome_classes_csv <- args[3]
 metadata_csv <- args[4]
-arg_index <- 5
+tes_filtered_csv <- if (args[5] != "NO_FILE") args[5] else no_edta <- TRUE
+genes_filtered_csv <- if (args[6] != "NO_FILE") args[6] else no_heli <- TRUE
+output_centromeric_scores <- args[7]
 
-tes_filtered_csv <- if (length(args) >= arg_index + 1 && args[arg_index] != "") args[arg_index] else NULL
-if (!is.null(tes_filtered_csv)) arg_index <- arg_index + 1
-
-genes_filtered_csv <- if (length(args) >= arg_index + 1 && args[arg_index] != "") args[arg_index] else NULL
-if (!is.null(genes_filtered_csv)) arg_index <- arg_index + 1
-
-output_centromeric_scores <- args[arg_index]
 
 # Load libraries
 suppressMessages({library(seqinr)
@@ -29,25 +26,25 @@ suppressMessages({library(seqinr)
                   library(GenomicRanges)})
 
 # Load additional functions
-source("./aux_fun.R")
+source(file.path(Sys.getenv("WORKFLOW_DIR"), "bin", "auxfuns.R"))
 
 # Load required data
+# print("load repeats")
 repeats <- read.csv(repeats_reclassed_csv)
+# print("load arrays")
 arrays <- read.csv(arrays_reclassed_csv)
+# print("load classes")
 genome_classes_data <- read.csv(genome_classes_csv)
+# print("load metadata")
 metadata_data <- read.csv(metadata_csv)
 
+
 # Load optionals if provided
-available_EDTA <- FALSE
-if (!is.null(tes_filtered_csv)) {
-  edta <- read.csv(tes_filtered_csv)
-  available_EDTA <- TRUE
-}
-available_GENE <- FALSE
-if (!is.null(genes_filtered_csv)) {
-  genes <- read.csv(genes_filtered_csv)
-  available_GENE <- TRUE
-}
+# print("load edta")
+if (!no_edta) edta <- read.csv(tes_filtered_csv)
+# print("load genes")
+if (!no_heli) genes <- read.csv(genes_filtered_csv)
+
 
 # Score
 
@@ -107,7 +104,7 @@ if (!is.null(genes_filtered_csv)) {
       c(0, cum_widths)[idxs + 1]
     }
     
-    if(available_EDTA) {
+    if(!no_edta) {
       # mask repeats from TE coordinates and find adjusted repeat coordinates
       sequence_edta = edta[edta$V1 == chromosomes[j], ]
       gr2 <- with(sequence_edta, GRanges(chromosomes[j], IRanges(V4, V5)))
@@ -146,7 +143,7 @@ if (!is.null(genes_filtered_csv)) {
       
     }
     
-    if(available_GENE) {
+    if(!no_heli) {
       # calculate gene landscape for -proximity scoring
       sequence_genes <- genes[genes$V1 == chromosomes[j],]
       sequence_genes_no_rep <- sequence_genes
@@ -213,6 +210,7 @@ if (!is.null(genes_filtered_csv)) {
     
     ### Calculate predictor values ===============================================
     print("predictors")
+    chr_classes$chromosome <- chromosomes[j]
     chr_classes$total_bp_norm_chr <- -1
     chr_classes$total_bp_norm_rep <- -1
     chr_classes$start_sd_norm_chr <- -1
@@ -266,7 +264,7 @@ if (!is.null(genes_filtered_csv)) {
       
       # What are the array interspersed elements (if any)?
       #   Calculation: Find array interspersed sequence (under 20 kbp gaps, more than 200 bp) and count what fraction of them are Tes or TE-derived sequences
-      if(available_EDTA) {
+      if(!no_edta) {
         if(nrow(chr_family_repeats) > 1) {
           gaps_start <- chr_family_repeats$end[1 : (nrow(chr_family_repeats) - 1)] + 1
           gaps_size <- chr_family_repeats$start[2 : (nrow(chr_family_repeats) - 0)] - chr_family_repeats$end[1 : (nrow(chr_family_repeats) - 1)] - 1
@@ -331,7 +329,7 @@ if (!is.null(genes_filtered_csv)) {
         cat(array_id, " (", nrow(array_repeats), " reps), ", sep = "")
         if(length(sequences_to_align) < 2) {
           cat("\n\n\n\n")
-          stop(paste0(assembly_file, " did not find repeats in one of the classes: ", classes$class[j], ", investigate"))
+          stop(paste0(" did not find repeats in one of the classes: ", classes$class[j], ", investigate"))
         }
         a <- capture.output({alignment_matrix = suppressWarnings(msa(sequences_to_align, method = "ClustalOmega", type = "dna"))})
         centre_consensus <- consensus_N(alignment_matrix, round(mean(nchar(sequences_to_align))))
@@ -388,18 +386,18 @@ if (!is.null(genes_filtered_csv)) {
       }
       
       #   What is the TE landscape in the proximity?
-      if(available_EDTA) {
+      if(!no_edta) {
         chr_classes$TE_prox_dist[k] <- 100 * abs(mean(chr_family_repeats$start_adj) - edta_peak) / chromosome_no_rep_size # the lower the better
         
         chr_classes$TE_prox_SD[k] <- sd(100 * abs(chr_family_repeats$start_adj - edta_peak) / chromosome_no_rep_size) # the lower the better
         
-        chr_classes$TE_lm_coef[k] <- lm_coef$coefficients[2] # the higher absolute the better
+        chr_classes$TE_lm_coef[k] <- lm_coef_TE$coefficients[2] # the higher absolute the better
         
       }
       
       # Score the repeat class based on it’s own mean start position distance to the TE “peak”, score accounting for the correlation calculated before
       
-      if(available_EDTA) {
+      if(!no_edta) {
         chr_classes$TE_prox_score[k] <- abs(chr_classes$TE_lm_coef[k]) / (chr_classes$TE_prox_dist[k] + chr_classes$TE_prox_SD[k]) * 100
         
       } else {
@@ -408,7 +406,7 @@ if (!is.null(genes_filtered_csv)) {
       
       # What is the gene landscape in the proximity?
       #   Calculation: Identical to the TE, but this time expect negative correlation
-      if(available_GENE) {
+      if(!no_heli) {
         chr_classes$gene_prox_dist[k] <- 100 * abs(mean(chr_family_repeats$start_adj) - gene_valley) / chromosome_no_rep_size # the lower the better
         
         chr_classes$gene_prox_SD[k] <- sd(100 * abs(chr_family_repeats$start_adj - gene_valley) / chromosome_no_rep_size) # the lower the better
@@ -425,7 +423,7 @@ if (!is.null(genes_filtered_csv)) {
       # What TE families can be identified in the proximity?
       #   Calculation: For each individual TE, calculate distance between it and the closest repeat unit of analysed family, then divide the mean distances of predicted centrophilic TEs by mean distances of other TEs, the lower the ratio, the higher the score
       
-      if(available_EDTA) {
+      if(!no_edta) {
         sequence_edta$centrophilic_Classification = FALSE
         sequence_edta$centrophilic_Classification[grep(chr_classes$pred_centrophilic_TE[1], sequence_edta$Classification)] = TRUE
         

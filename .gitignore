@@ -3,6 +3,7 @@ renv/library/
 renv/staging/
 renv/python/
 renv/.cache/
+work/
 
 # Keep these (they are versioned)
 !renv.lock

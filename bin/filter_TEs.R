@@ -17,7 +17,8 @@ suppressMessages({library(seqinr)
                   library(msa)})
 
 # Load additional functions
-source("./aux_fun.R")
+source(file.path(Sys.getenv("WORKFLOW_DIR"), "bin", "auxfuns.R"))
+tes_data <- data.frame()
 
 # Load data 
 
