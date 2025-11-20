@@ -58,7 +58,7 @@ for (j in seq_along(chromosomes)) {
   sequence_genes_CDS$overlapping_bp <- 0
   
   gr1 <- with(sequence_arrays, GRanges( chromosomes[j], IRanges(start, end)))
-  gr2 <- with(sequence_genes_CDS, GRanges(chromosomes[j], IRanges(V4, V5)))
+  gr2 <- with(sequence_genes_CDS, GRanges(chromosomes[j], IRanges(start, end)))
   
   overlaps <- as.data.frame(findOverlaps(gr1, gr2))
   
