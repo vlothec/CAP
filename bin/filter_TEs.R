@@ -41,7 +41,7 @@ tes_data$overlapping_bp = 0
 # for each chromosome
 for (j in seq_along(chromosomes)) {  
   sequence_arrays = arrays_filtered[arrays_filtered$seqID == chromosomes[j], ]
-  sequence_tes = tes_data[tes_data$V1 == chromosomes[j], ]
+  sequence_tes = tes_data[tes_data$seqID == chromosomes[j], ]
   
   if(nrow(sequence_arrays) + nrow(sequence_tes) == 0) next
   

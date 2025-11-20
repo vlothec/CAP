@@ -13,15 +13,14 @@ assembly_fasta <- args[1]
 output_metadata <- args[2]
 
 # Load libraries
-suppressMessages({library(seqinr)
-                  library(msa)})
+suppressMessages({library(Biostrings)})
 
 # Load additional functions
 source(file.path(Sys.getenv("WORKFLOW_DIR"), "bin", "auxfuns.R"))
 
 # Load data 
 
-fasta <- read.fasta(assembly_fasta)
+fasta <- readDNAStringSet(assembly_fasta)
 
 # Run
 {
@@ -29,9 +28,12 @@ fasta <- read.fasta(assembly_fasta)
   
   metadata_data <- data.frame(assembly.name = rep(assembly.name, length(fasta)),
                               chromosome.name = names(fasta),
-                              size = unlist(lapply(fasta, length)),
+                              size = width(fasta),
                               is.chr = rep(1, length(fasta)))
 }
 
+for(i in seq_len(nrow(metadata_data))) {
+  metadata_data$chromosome.name[i] <- strsplit(metadata_data$chromosome.name[i], " ")[[1]][1]
+}
 # Save output
 write.csv(metadata_data, file = output_metadata, row.names = FALSE) 

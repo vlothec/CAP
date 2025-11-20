@@ -49,11 +49,11 @@ for (j in seq_along(chromosomes)) {
     next
   }
   
-  gene_IDs <- unique(sequence_genes$ID[sequence_genes$V3 == "gene"])
-  gene_cluster_start <- which(sequence_genes$V3 == "gene")
+  gene_IDs <- unique(sequence_genes$ID[sequence_genes$type == "gene"])
+  gene_cluster_start <- which(sequence_genes$type == "gene")
   gene_cluster_end = c(gene_cluster_start[-1], nrow(sequence_genes))
   
-  which_sequence_CDS <- which(sequence_genes$V3 == "CDS")
+  which_sequence_CDS <- which(sequence_genes$type == "CDS")
   sequence_genes_CDS = sequence_genes[which_sequence_CDS, ]
   sequence_genes_CDS$overlapping_bp <- 0
   
@@ -72,7 +72,7 @@ for (j in seq_along(chromosomes)) {
   
   for(k in seq_along(gene_IDs)) { 
     gene_cluster <- sequence_genes[gene_cluster_start[k] : gene_cluster_end[k], ]
-    gene_CDS_total_size <- sum(gene_cluster$width[gene_cluster$V3 == "CDS"])
+    gene_CDS_total_size <- sum(gene_cluster$width[gene_cluster$type == "CDS"])
     gene_CDS_total_overlap <- sum(gene_cluster$overlapping_bp)
     if((gene_CDS_total_overlap / gene_CDS_total_size) > genes_overlap_max_perc) {
       genes_to_remove <- c(genes_to_remove, (gene_cluster_start[k] : gene_cluster_end[k]))

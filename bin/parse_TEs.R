@@ -5,12 +5,22 @@
 
 # Parse command-line arguments
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) != 2) {
-  stop("Usage: parse_TEs.R <te_annotation.gff3> <output_TEs_parsed.csv>\nNote: Output will be written in CSV format.")
+if (length(args) != 3) {
+  stop("Usage: parse_TEs.R <te_annotation.gff3> <metadata.csv> <output_TEs_parsed.csv> \nNote: Output will be written in CSV format.")
 }
 
 te_gff <- args[1]
-output_tes_parsed <- args[2]
+metadata_csv <- args[2]
+output_tes_parsed <- args[3]
+print(te_gff)
+print(metadata_csv)
+print(output_tes_parsed)
+if (!file.exists(metadata_csv)) {
+  stop(paste("Metadata CSV file not found:", metadata_csv))
+}
+if (!file.exists(te_gff)) {
+  stop(paste("TE GFF file not found:", te_gff))
+}
 
 # Load libraries
 suppressMessages({library(seqinr)
@@ -27,28 +37,36 @@ te_raw_data <- read.table(te_gff,
                           blank.lines.skip = TRUE,
                           stringsAsFactors = FALSE)
 names(te_raw_data) <- c("seqID", "source", "type", "start", "end", "score", "strand", "phase", "attributes")
+metadata <- read.csv(metadata_csv)
 
+# Rename TE seqID if needed
+metadata$new_chr_name <- ""
+metadata$shortened_chr_name = ""
+for (i in seq_along(unique(metadata$chromosome))) {
+  metadata$new_chr_name[metadata$chromosome == unique(metadata$chromosome)[i]] <- paste0("Chr", i)
+  metadata$shortened_chr_name[metadata$chromosome == unique(metadata$chromosome)[i]] <- strsplit(unique(metadata$chromosome)[i], split = " ")[[1]][1]
+  te_raw_data$seqID[te_raw_data$seqID == paste0("Chr", i)] <- strsplit(unique(metadata$chromosome)[i], split = " ")[[1]][1]
+}
+
+# Parse attributes and reformat data
 attributes = lapply(te_raw_data$attributes, function(X) strsplit(X, split = ";")[[1]])
 new_cols = lapply(attributes, function(X) unlist(lapply(X, function(x) strsplit(x, split = "=")[[1]][1])))
 new_cols = unique(unlist(new_cols))
 edta_full = te_raw_data[, 1:9]
 for (j in seq_along(new_cols)) {
-  cat(j, "/", length(new_cols), "\n")
-  new_data = lapply(te_raw_data$attributes, function(X) {
-  new_data = unlist(lapply(new_data, function(X) {
+  new_data <- sapply(te_raw_data$attributes, function(X) {
     split_res <- strsplit(X, split = ";")[[1]]
-    if (length(split_res) > 0) split_res[1] else NA
-  }))
-    if (length(m) > 0) sub(paste0(new_cols[j], "="), "", m) else NA
+    m <- split_res[grep(paste0("^", new_cols[j], "="), split_res)]
+    if (length(m) > 0) sub(paste0(new_cols[j], "="), "", m[1]) else NA
   })
-  new_data = unlist(new_data)
   
-  edta_full = cbind(edta_full, new_data)
-  names(edta_full)[ncol(edta_full)] = new_cols[j]
+  edta_full <- cbind(edta_full, new_data)
+  names(edta_full)[ncol(edta_full)] <- new_cols[j]
 }
 edta_full$old_type = edta_full$type
 
 names(edta_full) <- tolower(names(edta_full))
+names(edta_full)[names(edta_full) == "seqid"] <- "seqID"
 
 edta_repeat_region = edta_full[edta_full$type == "repeat_region", ]
 edta_non_rep_reg = edta_full[edta_full$type != "repeat_region", ]

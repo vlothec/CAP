@@ -5,12 +5,13 @@
 
 # Parse command-line arguments
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) != 2) {
-  stop("Usage: parse_genes.R <helixer.gff> <output_genes_parsed.csv>")
+if (length(args) != 3) {
+  stop("Usage: parse_genes.R <helixer.gff> <metadata.csv> <output_genes_parsed.csv>")
 }
 
 gene_gff <- args[1]
-output_genes_parsed <- args[2]
+metadata_csv <- args[2]
+output_genes_parsed <- args[3]
 
 # Load libraries
 suppressMessages({library(seqinr)
@@ -26,7 +27,16 @@ gene_raw_data <- read.table(gene_gff,
                             comment.char = "#",
                             blank.lines.skip = TRUE,
                             stringsAsFactors = FALSE)
+metadata <- read.csv(metadata_csv)
 
+# Rename TE seqID if needed
+metadata$new_chr_name <- ""
+metadata$shortened_chr_name <- ""
+for (i in seq_along(unique(metadata$chromosome))) {
+  metadata$new_chr_name[metadata$chromosome == unique(metadata$chromosome)[i]] <- paste0("Chr", i)
+  metadata$shortened_chr_name[metadata$chromosome == unique(metadata$chromosome)[i]] <- strsplit(unique(metadata$chromosome)[i], split = " ")[[1]][1]
+  te_raw_data$seqID[te_raw_data$seqID == paste0("Chr", i)] <- strsplit(unique(metadata$chromosome)[i], split = " ")[[1]][1]
+}
 # --- Your parsing code here ---
 names(gene_raw_data) <- c("seqID", "source", "type", "start", "end", "score", "strand", "phase", "attributes")
 
@@ -35,21 +45,17 @@ new_cols = lapply(attributes, function(X) unlist(lapply(X, function(x) strsplit(
 new_cols = unique(unlist(new_cols))
 gene_full = gene_raw_data[, 1:9]
 for (j in seq_along(new_cols)) {
-  cat(j, "/", length(new_cols), "\n")
-  new_data = lapply(gene_raw_data$attributes, function(X) {
-  new_data = unlist(lapply(new_data, function(X) {
+  new_data <- sapply(gene_raw_data$attributes, function(X) {
     split_res <- strsplit(X, split = ";")[[1]]
-    if (length(split_res) > 0) split_res[1] else NA
-  }))
-    if (length(m) > 0) sub(paste0(new_cols[j], "="), "", m) else NA
+    m <- split_res[grep(paste0("^", new_cols[j], "="), split_res)]
+    if (length(m) > 0) sub(paste0(new_cols[j], "="), "", m[1]) else NA
   })
-  new_data = unlist(new_data)
   
-  gene_full = cbind(gene_full, new_data)
-  names(gene_full)[ncol(gene_full)] = new_cols[j]
+  gene_full <- cbind(gene_full, new_data)
+  names(gene_full)[ncol(gene_full)] <- new_cols[j]
 }
 
 
 
 # Save output
-write.csv(parsed_data, file = output_genes_parsed, row.names = FALSE)  # Assuming parsed_data is created in your code
+write.csv(gene_full, file = output_genes_parsed, row.names = FALSE)  # Assuming parsed_data is created in your code

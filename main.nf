@@ -113,18 +113,21 @@ process MERGE_CLASSES {
 
 // ────────────────────── OPTIONAL: PARSE / FILTER TEs ──────────────────────
 process PARSE_TES {
+    publishDir "${params.outdir}", mode: 'copy'
     input:
     path te_gff
+    path metadata
     output:
     path "${te_gff.baseName}_TEs_parsed.csv"
     
     script:
     """
-    Rscript ${workflow.projectDir}/bin/parse_TEs.R ${te_gff} ${te_gff.baseName}_TEs_parsed.csv
+    Rscript ${workflow.projectDir}/bin/parse_TEs.R ${te_gff} ${metadata} ${te_gff.baseName}_TEs_parsed.csv
     """
 }
 
 process FILTER_TES {
+    publishDir "${params.outdir}", mode: 'copy'
     input:
     path parsed
     path arrays_filtered
@@ -139,18 +142,21 @@ process FILTER_TES {
 
 // ────────────────────── OPTIONAL: PARSE / FILTER GENES ──────────────────────
 process PARSE_GENES {
+    publishDir "${params.outdir}", mode: 'copy'
     input:
     path gene_gff
+    path metadata
     output:
     path "${gene_gff.baseName}_genes_parsed.csv"
  
     script:
     """
-    Rscript ${workflow.projectDir}/bin/parse_genes.R ${gene_gff} ${gene_gff.baseName}_genes_parsed.csv
+    Rscript ${workflow.projectDir}/bin/parse_genes.R ${gene_gff} ${metadata} ${gene_gff.baseName}_genes_parsed.csv
     """
 }
 
 process FILTER_GENES {
+    publishDir "${params.outdir}", mode: 'copy'
     input:
     path parsed
     path arrays_filtered
@@ -361,7 +367,7 @@ See README.md for full details: https://github.com/vlothec/CAP
 
     // ---- Optional TEs ----
     if (params.te_gff) {
-        te_parsed = PARSE_TES(te_gff_ch)
+        te_parsed = PARSE_TES(te_gff_ch, metadata)
         // pass parsed TEs + arrays_filtered + metadata into FILTER_TES
         te_filtered = FILTER_TES(te_parsed, arrays_ch, metadata)
     } else {
@@ -370,7 +376,7 @@ See README.md for full details: https://github.com/vlothec/CAP
 
     // ---- Optional Genes ----
     if (params.gene_gff) {
-        gene_parsed = PARSE_GENES(gene_gff_ch)
+        gene_parsed = PARSE_GENES(gene_gff_ch, metadata)
         // pass parsed genes + arrays_filtered + metadata into FILTER_GENES
         gene_filtered = FILTER_GENES(gene_parsed, arrays_ch, metadata)
     } else {

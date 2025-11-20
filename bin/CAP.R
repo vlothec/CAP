@@ -50,8 +50,30 @@ scores_data <- read.csv(scores_csv)
 
 # Load optionals if provided
 print("load extra")
-if (!no_edta) tes_data <- read.csv(tes_filtered_csv)
-if (!no_heli) genes_data <- read.csv(genes_filtered_csv)
+if (!no_edta) {
+  if (file.size(tes_filtered_csv) > 1) {
+    tes_data <- read.csv(tes_filtered_csv)
+    if (nrow(tes_data) == 0) {
+      warning("TEs file is empty, setting no_edta=TRUE")
+      no_edta <- TRUE
+    }
+  } else {
+    warning("TEs file is empty (0 bytes), setting no_edta=TRUE")
+    no_edta <- TRUE
+  }
+}
+if (!no_heli) {
+  if (file.size(genes_filtered_csv) > 1) {
+    genes_data <- read.csv(genes_filtered_csv)
+    if (nrow(genes_data) == 0) {
+      warning("Genes file is empty, setting no_heli=TRUE")
+      no_heli <- TRUE
+    }
+  } else {
+    warning("Genes file is empty (0 bytes), setting no_heli=TRUE")
+    no_heli <- TRUE
+  }
+}
 
 
 
@@ -63,19 +85,19 @@ if (nrow(classes)) classes$num_ID <- seq_len(nrow(classes))
 
 if (!no_heli) {
   genes <- genes_data
-  genes <- genes[genes$V3 == "CDS", ]
+  genes <- genes[genes$type == "CDS", ]
 }
 
 if (!no_edta) {
   edta <- tes_data
   if ("reassigned" %in% colnames(edta)) {
-    names(edta) <- c("", "V1","V2","V3","V4","V5","V6","V7","V8","ID","Name",
-                     "Classification","Sequence_ontology","Identity","Method",
-                     "TSD","TIR","motif","tsd","oldV3","overlapping_bp",
-                     "width","overlapping_percentage","reassigned")
-    edta$V4 <- edta$V4 + 1; edta$V5 <- edta$V5 + 1
+    # names(edta) <- c("", "V1","V2","V3","V4","V5","V6","V7","V8","ID","Name",
+    #                  "Classification","Sequence_ontology","Identity","Method",
+    #                  "TSD","TIR","motif","tsd","oldV3","overlapping_bp",
+    #                  "width","overlapping_percentage","reassigned")
+    edta$start <- edta$start + 1; edta$end <- edta$end + 1
   }
-  edta$V4[edta$V4 == 0] <- 1
+  edta$start[edta$start == 0] <- 1
 }
 
 ####
@@ -133,6 +155,8 @@ edta_classes_colours <-  c(
 # ------------------------------------------------------------------ #
 #  CHROMOSOME FILTERING (top 30 longest)
 # ------------------------------------------------------------------ #
+message("Removed from plotting chromosomes shorter than 200 kbp: ", chr_info$chromosome.name[chr_info$size < 200000])
+chr_info <- chr_info[chr_info$size > 200000,] # TODO: remove this, user should provide fasta with only relevant chromosomes or add parameter
 chromosomes     <- chr_info$chromosome.name
 chromosomes_len <- chr_info$size
 
@@ -221,15 +245,15 @@ for(k in 1 : length(chromosomes_sets)) {
          heights = c(700, rep(c(200,400,300,300),length(chromosomes))))
   
   par(mar = c(0.5,2,0.2,0.2), mgp = c(0.5, 0.5, 0), oma = c(2, 3, 3, 4))
-  
+  cex_factor <- 2
   # ------------------------------------------------------------------ #
   #  TITLE
   # ------------------------------------------------------------------ #
   plot(NA, xlim = c(1,100), ylim = c(1,100), axes = FALSE, xlab = "", ylab = "")
-  text(50, 95, assembly_name, pos = 1, cex = 5)
-  text(1, 70, sprintf("Total size: %s Mbp", formatC(sum(chromosomes_len)/1e6, format="f", digits=3, big.mark=" ")), pos=4, cex=3)
-  text(1,55, sprintf("Chromosomes: %d", length(chromosomes)), pos=4, cex=3)
-  text(1,40, sprintf("Transposable elements legend:"), pos=4, cex=2)
+  text(50, 95, assembly_name, pos = 1, cex = cex_factor*5)
+  text(1, 70, sprintf("Total size: %s Mbp", formatC(sum(chromosomes_len)/1e6, format="f", digits=3, big.mark=" ")), pos=4, cex = cex_factor*3)
+  text(1,55, sprintf("Chromosomes: %d", length(chromosomes)), pos=4, cex = cex_factor*3)
+  text(1,40, sprintf("Transposable elements legend:"), pos=4, cex = cex_factor*2)
   
   text(x = c(1,15,30,45,60,75,90), y = 32, 
        labels =  c("class I LTR: ",
@@ -240,7 +264,7 @@ for(k in 1 : length(chromosomes_sets)) {
                    "Caulimoviridae", 
                    "unspecified"), 
        col = c("black", edta_classes_colours[1:6]),
-       pos = 4, cex = 1.5)
+       pos = 4, cex = cex_factor* 1.5)
   text(x = c(1,15,30,45,60,75), y = 26, 
        labels = c("class I non-LTR: ", 
                   "LINE",
@@ -249,11 +273,11 @@ for(k in 1 : length(chromosomes_sets)) {
                   "DIRS YR",
                   "unspecified"),
        col = c("black", edta_classes_colours[7:11]),
-       pos = 4, cex = 1.5)
+       pos = 4, cex = cex_factor* 1.5)
   text(x = c(1,15), y = 20, 
        labels = c("class II TIRs: ", "Kolobok;Ginger;Academ;Novosib;Sola;Merlin;IS3EU;PiggyBac;hAT;Mutator;Tc1 Mariner;Dada;CACTA;Zisupton;PIF Harbinger"),
        col = c("black", edta_classes_colours[12]), 
-       pos = 4, cex = 1.5)
+       pos = 4, cex = cex_factor* 1.5)
   text(x = c(1,15,30,45,60), y = 14, 
        labels = c("class II others: ",  
                   "DNA_transposon",
@@ -261,12 +285,12 @@ for(k in 1 : length(chromosomes_sets)) {
                   "MITE",
                   "Maverick Polinton"),
        col = c("black", edta_classes_colours[13:16]), 
-       pos = 4, cex = 1.5)
+       pos = 4, cex = cex_factor* 1.5)
   text(x = c(1,15,30), y = 8, 
        labels = c("other: ", "Tyrosine Recombinase",
                   "unspecified"),
        col = c("black", edta_classes_colours[17:18]), 
-       pos = 4, cex = 1.5)
+       pos = 4, cex = cex_factor* 1.5)
   
   # ------------------------------------------------------------------ #
   #  PER-CHROMOSOME LOOP
@@ -276,17 +300,17 @@ for(k in 1 : length(chromosomes_sets)) {
     chr <- chromosomes[j]
     len <- chromosomes_len[j]
     rep_chr <- subset(repeats, seqID == chr)
-    edt_chr <- if (!no_edta) subset(edta, V1 == chr) else data.frame()
-    gen_chr <- if (!no_heli) subset(genes, V1 == chr) else data.frame()
+    edt_chr <- if (!no_edta) subset(edta, seqID == chr) else data.frame()
+    gen_chr <- if (!no_heli) subset(genes, seqID == chr) else data.frame()
     
     print(paste0("Genome ", assembly_name, " | Chromosome ", j, "/", length(chromosomes)))
     
     plot(NA,NA, xlim = c(1,100), ylim = c(1,300), xlab = "", ylab = "", axes = F)
-    text(x = 1, y = 15, labels = assembly_name, pos = 4, cex = 1.4)
-    text(x = 15, y = 15, labels = chromosomes[j], pos = 4, cex = 1.2)
+    text(x = 1, y = 15, labels = assembly_name, pos = 4, cex = cex_factor* 1.4)
+    text(x = 15, y = 15, labels = chromosomes[j], pos = 4, cex = cex_factor* 1.2)
     text(x = 30, y = 15, 
          labels = paste0(formatC(chromosomes_len[j]/1000000, format = "f", big.mark = " ", digits = 3), " Mbp"), 
-         pos = 4, cex = 1.2)
+         pos = 4, cex = cex_factor* 1.2)
     abline(h = 50, lwd = 4)
     abline(h = 60, lwd = 4)
     
@@ -309,7 +333,7 @@ for(k in 1 : length(chromosomes_sets)) {
     } else rep(0, length(win_rep))
     rep_cov[rep_cov == 0] <- NA; rep_cov[rep_cov > 100] <- 100
     plot(win_rep, rep_cov, type="h", col="#CCCCCC", ylim=c(0,100), xaxt="n", yaxt="n", xlab="", ylab="")
-    mtext("REP%         per 10 Kbp", side = 2, line = 0, col = "grey", cex = 0.5, at = 10, adj = 0)
+    mtext("REP%         per 10 Kbp", side = 2, line = 0, col = "grey", cex = cex_factor* 0.5, at = 10, adj = 0)
     axis(side = 2, labels = c("0","100"), at = c(0,100))
     
     # GC (TODO only if requested)
@@ -317,14 +341,14 @@ for(k in 1 : length(chromosomes_sets)) {
     gc_mids <- gc_chs_data$bin_mid
     gc_vals <- gc_chs_data$bin_value
     lines(gc_mids, gc_vals, type = "l", lwd = 1)
-    mtext("GC%            per  2 Kbp", side = 2, line = 2, col = "black", cex = 0.5, at = 10, adj = 0)
+    mtext("GC%            per  2 Kbp", side = 2, line = 2, col = "black", cex = cex_factor* 0.5, at = 10, adj = 0)
     
     # CTW (TODO only if requested)
     ctw_chs_data <- ctw_data[ctw_data$chromosome == chr,]
     ctw_mids <- ctw_chs_data$bin_mid
     ctw_vals <- ctw_chs_data$bin_value
     lines(x = ctw_mids, ctw_vals, type = "l", col = "#FFA500",lwd = 1)
-    mtext("CTW            per  2 Kbp D10", side = 2, line = 3, col = "#FFA500", cex = 0.5, at = 10, adj = 0)
+    mtext("CTW            per  2 Kbp D10", side = 2, line = 3, col = "#FFA500", cex = cex_factor* 0.5, at = 10, adj = 0)
     
     
     # Families
@@ -336,7 +360,7 @@ for(k in 1 : length(chromosomes_sets)) {
         cov[cov == 0] <- NA; cov[cov > 100] <- 100
         lines(win_rep, cov, col = palette[k], pch=16, type="o")
       }
-      mtext("SIG REP% per 10 Kbp", side = 2, line = 1, col = "#88CCEE", cex = 0.5, at = 10, adj = 0)
+      mtext("SIG REP% per 10 Kbp", side = 2, line = 1, col = "#88CCEE", cex = cex_factor* 0.5, at = 10, adj = 0)
     }
     axis(1, at = seq(0, len, by = x_tick), labels = FALSE)
     # text(1, bin_rep, chr, pos = 4)
@@ -344,28 +368,28 @@ for(k in 1 : length(chromosomes_sets)) {
     # === PLOT B: EDTA + TE/repeat peak + genes + HiC ===
     win_edta <- genomic.bins.starts(1, len, bin.size = bin_edta)
     edt_cov <- if (!no_edta && nrow(edt_chr)) {
-      calculate.repeats.percentage.in.windows(win_edta, edt_chr$V4, edt_chr$width, len)
+      calculate.repeats.percentage.in.windows(win_edta, edt_chr$start, edt_chr$width, len)
     } else rep(0, length(win_edta))
     edt_cov[edt_cov == 0] <- NA; edt_cov[edt_cov > 100] <- 100
     plot(win_edta + bin_edta/2, edt_cov, type="h", col="#CCCCCC", ylim=c(0,100), xaxt="n", yaxt="n", xlab="", ylab="")
-    mtext("EDTA%           per 100 Kbp", side = 2, line = 0, col = "grey", cex = 0.5, at = 10, adj = 0)
+    mtext("EDTA%           per 100 Kbp", side = 2, line = 0, col = "grey", cex = cex_factor* 0.5, at = 10, adj = 0)
     axis(2, col="grey", at = c(0,100), labels = c("0", "100"))
     
     # EDTA classes
     if (!no_edta && nrow(edt_chr)) {
       for (k in rev(seq_along(edta_classes))) {
-        cls <- edt_chr[edt_chr$V3 %in% edta_classes[[k]], ]
+        cls <- edt_chr[edt_chr$start %in% edta_classes[[k]], ]
         if (!nrow(cls)) next
-        cov <- calculate.repeats.percentage.in.windows(win_edta, cls$V4, cls$width, len)
+        cov <- calculate.repeats.percentage.in.windows(win_edta, cls$end, cls$width, len)
         cov[cov == 0] <- NA; cov[cov > 100] <- 100
         lines(win_edta + (bin_edta/2), cov, col = edta_classes_colours[k], pch=16, type="o")
       }
-      mtext("FAM EDTA%  per 100 Kbp", side = 2, line = 1, col = "red", cex = 0.5, at = 10, adj = 0)
+      mtext("FAM EDTA%  per 100 Kbp", side = 2, line = 1, col = "red", cex = cex_factor* 0.5, at = 10, adj = 0)
     }
     
     # TE+repeat peak
     te_coords <- c()
-    if (!no_edta && nrow(edt_chr)) te_coords <- c(te_coords, unlist(mapply(`:`, edt_chr$V4, edt_chr$V5)))
+    if (!no_edta && nrow(edt_chr)) te_coords <- c(te_coords, unlist(mapply(`:`, edt_chr$start, edt_chr$end)))
     if (nrow(rep_chr))          te_coords <- c(te_coords, unlist(mapply(`:`, rep_chr$start, rep_chr$end)))
     if (length(te_coords)) {
       te_hist <- hist(te_coords, breaks = seq(0, len, length.out = bin_gene), plot = FALSE)
@@ -374,7 +398,7 @@ for(k in 1 : length(chromosomes_sets)) {
       par(new = TRUE)
       plot(te_hist$mids, te_ma, type="b", col="#0066aa", lwd=4, ylim=c(0, max(te_ma)), yaxt="n", xlab="", ylab="")
       axis(4, col="#0066aa", line = 0, col.axis = "#0066aa")
-      mtext("      TE+REP dens per 100 Kbp", side = 2, line = 2, col = "#0066aa", cex = 0.5, at = 20, adj = 0)
+      mtext("      TE+REP dens per 100 Kbp", side = 2, line = 2, col = "#0066aa", cex = cex_factor* 0.5, at = 20, adj = 0)
     }
     
     # # HiC
@@ -385,20 +409,20 @@ for(k in 1 : length(chromosomes_sets)) {
     #     par(new = TRUE)
     #     plot(hic$Bin_Midpoint_BP, hic$Std_Dev_Interchrom_Contacts,
     #          type="b", col="#bb3300", lwd=4, yaxt="n", xlab="", ylab="")
-    #     mtext("      HiC normalised signal", side = 2, line = 4, col = "#bb3300", cex = 0.5, at = 20, adj = 0)
+    #     mtext("      HiC normalised signal", side = 2, line = 4, col = "#bb3300", cex = cex_factor* 0.5, at = 20, adj = 0)
     #   }
     # }
     
     # Gene valley
     if (!no_heli && nrow(gen_chr)) {
-      gen_coords <- unlist(mapply(`:`, gen_chr$V4, gen_chr$V5))
+      gen_coords <- unlist(mapply(`:`, gen_chr$start, gen_chr$end))
       gen_hist <- hist(gen_coords, breaks = seq(0, len, length.out = bin_gene), plot = FALSE)
       gen_ma   <- ma(c(gen_hist$counts[1], gen_hist$counts[1], gen_hist$counts,
                        gen_hist$counts[length(gen_hist$counts)], gen_hist$counts[length(gen_hist$counts)]))[3:(length(gen_hist$counts)+2)]
       par(new = TRUE)
       plot(gen_hist$mids, gen_ma, type="b", col="#00bb33", lwd=4, ylim=c(0, max(gen_ma)), yaxt="n", xlab="", ylab="")
       axis(4, col="#00bb33", line = 2, col.axis = "#00bb33")
-      mtext("      GENE dens     per 100 Kbp", side = 2, line = 3, col = "#00bb33", cex = 0.5, at = 10, adj = 0)
+      mtext("      GENE dens     per 100 Kbp", side = 2, line = 3, col = "#00bb33", cex = cex_factor* 0.5, at = 10, adj = 0)
     }
   }
   
@@ -439,7 +463,7 @@ if(T) {
     dotPlot(strsplit(full_seq, "")[[1]], strsplit(full_seq, "")[[1]],
             wsize = 4, wstep = 1, nmatch = 4,
             col = c("white","black"), xlab = "n", ylab = "n",
-            cex = 10, xaxt = "n", yaxt = "n", lwd = 3)
+            cex = cex_factor* 10, xaxt = "n", yaxt = "n", lwd = 3)
     
     abline(v = c(1, divs, divs_rc), col = classes_to_plot$colour, lwd = 12)
     abline(h = c(1, divs, divs_rc), col = classes_to_plot$colour, lwd = 12)

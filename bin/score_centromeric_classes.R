@@ -22,8 +22,8 @@ output_centromeric_scores <- args[7]
 
 # Load libraries
 suppressMessages({library(seqinr)
-                  library(msa)
-                  library(GenomicRanges)})
+  library(msa)
+  library(GenomicRanges)})
 
 # Load additional functions
 source(file.path(Sys.getenv("WORKFLOW_DIR"), "bin", "auxfuns.R"))
@@ -37,6 +37,9 @@ arrays <- read.csv(arrays_reclassed_csv)
 genome_classes_data <- read.csv(genome_classes_csv)
 # print("load metadata")
 metadata_data <- read.csv(metadata_csv)
+for(i in seq_len(nrow(metadata_data))) {
+  metadata_data$chromosome.name[i] <- strsplit(metadata_data$chromosome.name[i], " ")[[1]][1]
+}
 
 
 # Load optionals if provided
@@ -106,19 +109,20 @@ if (!no_heli) genes <- read.csv(genes_filtered_csv)
     
     if(!no_edta) {
       # mask repeats from TE coordinates and find adjusted repeat coordinates
-      sequence_edta = edta[edta$V1 == chromosomes[j], ]
-      gr2 <- with(sequence_edta, GRanges(chromosomes[j], IRanges(V4, V5)))
+      sequence_edta = edta[edta$seqID == chromosomes[j], ]
+      if(nrow(sequence_edta) == 0) next
+      gr2 <- with(sequence_edta, GRanges(chromosomes[j], IRanges(start, end)))
       sequence_edta_no_rep <- sequence_edta
-      sequence_edta_no_rep$legacy_V4 <- sequence_edta_no_rep$V4
-      sequence_edta_no_rep$legacy_V5 <- sequence_edta_no_rep$V5
-      sequence_edta_no_rep$adjustment <- compute_adjustment(sequence_edta_no_rep$V4)
-      sequence_edta_no_rep$V4 <- sequence_edta_no_rep$V4 - sequence_edta_no_rep$adjustment
-      sequence_edta_no_rep$V5 <- sequence_edta_no_rep$V5 - sequence_edta_no_rep$adjustment
+      sequence_edta_no_rep$legacy_start <- sequence_edta_no_rep$start
+      sequence_edta_no_rep$legacy_end <- sequence_edta_no_rep$end
+      sequence_edta_no_rep$adjustment <- compute_adjustment(sequence_edta_no_rep$start)
+      sequence_edta_no_rep$start <- sequence_edta_no_rep$start - sequence_edta_no_rep$adjustment
+      sequence_edta_no_rep$end <- sequence_edta_no_rep$end - sequence_edta_no_rep$adjustment
       
       # Peak identification
       TE_coordinates <- list()
       for(edta_id in seq_len(nrow(sequence_edta_no_rep))) {
-        TE_coordinates <- append(TE_coordinates, list(sequence_edta_no_rep$V4[edta_id] : sequence_edta_no_rep$V5[edta_id]))
+        TE_coordinates <- append(TE_coordinates, list(sequence_edta_no_rep$start[edta_id] : sequence_edta_no_rep$end[edta_id]))
       }
       TE_coordinates <- unlist(TE_coordinates)
       length(TE_coordinates)
@@ -131,13 +135,13 @@ if (!no_heli) genes <- read.csv(genes_filtered_csv)
       
       # calculate TE bp positions density in 2% chromosome length bins
       # calculate window TE density vs distance to peak and test it’s correlation
-
+      
       distance_to_mid <- abs(edta_peak - TE_coordinates)
       
+      dist_to_mid_hist <- hist(distance_to_mid, breaks = 25, plot = FALSE)
       dist_to_mid_hist <- data.frame(dist_to_mid = log10(100 * dist_to_mid_hist$mids / chromosome_no_rep_size),
                                      counts = (dist_to_mid_hist$counts) / (dist_to_mid_hist$breaks[2:length(dist_to_mid_hist$breaks)] - dist_to_mid_hist$breaks[1:(length(dist_to_mid_hist$breaks) - 1)]) / 2)
       dist_to_mid_hist <- dist_to_mid_hist[dist_to_mid_hist$counts != -Inf,]
-      summary(lm(counts ~ dist_to_mid, dist_to_mid_hist))
       lm_coef_TE <- lm(counts ~ dist_to_mid, dist_to_mid_hist)
       
       
@@ -145,19 +149,20 @@ if (!no_heli) genes <- read.csv(genes_filtered_csv)
     
     if(!no_heli) {
       # calculate gene landscape for -proximity scoring
-      sequence_genes <- genes[genes$V1 == chromosomes[j],]
+      sequence_genes <- genes[genes$seqID == chromosomes[j],]
+      if(nrow(sequence_genes) == 0) next
       sequence_genes_no_rep <- sequence_genes
-      sequence_genes_no_rep$legacy_V4 <- sequence_genes_no_rep$V4
-      sequence_genes_no_rep$legacy_V5 <- sequence_genes_no_rep$V5
-      sequence_genes_no_rep$adjustment <- compute_adjustment(sequence_genes_no_rep$V4)
-      sequence_genes_no_rep$V4 <- sequence_genes_no_rep$V4 - sequence_genes_no_rep$adjustment
-      sequence_genes_no_rep$V5 <- sequence_genes_no_rep$V5 - sequence_genes_no_rep$adjustment
+      sequence_genes_no_rep$legacy_start <- sequence_genes_no_rep$start
+      sequence_genes_no_rep$legacy_end <- sequence_genes_no_rep$end
+      sequence_genes_no_rep$adjustment <- compute_adjustment(sequence_genes_no_rep$start)
+      sequence_genes_no_rep$start <- sequence_genes_no_rep$start - sequence_genes_no_rep$adjustment
+      sequence_genes_no_rep$end <- sequence_genes_no_rep$end - sequence_genes_no_rep$adjustment
       
       
       # Valley identification
       gene_coordinates <- list()
       for(edta_id in seq_len(nrow(sequence_genes_no_rep))) {
-        gene_coordinates <- append(gene_coordinates, list(sequence_genes_no_rep$V4[edta_id] : sequence_genes_no_rep$V5[edta_id]))
+        gene_coordinates <- append(gene_coordinates, list(sequence_genes_no_rep$start[edta_id] : sequence_genes_no_rep$end[edta_id]))
       }
       gene_coordinates <- unlist(gene_coordinates)
       length(gene_coordinates)
@@ -169,12 +174,10 @@ if (!no_heli) genes <- read.csv(genes_filtered_csv)
       gene_valley <- hist_gene$mids[which.min(ma_values)]
       
       
-      distance_to_mid <- abs(edta_peak - gene_coordinates)
-      
+      dist_to_mid_hist <- hist(distance_to_mid, breaks = 25)
       dist_to_mid_hist <- data.frame(dist_to_mid = log10(100 * dist_to_mid_hist$mids / chromosome_no_rep_size),
                                      counts = (dist_to_mid_hist$counts) / (dist_to_mid_hist$breaks[2:length(dist_to_mid_hist$breaks)] - dist_to_mid_hist$breaks[1:(length(dist_to_mid_hist$breaks) - 1)]) / 2)
       dist_to_mid_hist <- dist_to_mid_hist[dist_to_mid_hist$counts != -Inf,]
-      summary(lm(counts ~ dist_to_mid, dist_to_mid_hist))
       lm_coef_genes <- lm(counts ~ dist_to_mid, dist_to_mid_hist)
       
     }
@@ -238,9 +241,9 @@ if (!no_heli) genes <- read.csv(genes_filtered_csv)
     
     
     for(k in seq_len(nrow(chr_classes))) {
-      cat(k, "/", nrow(chr_classes), "\n")
       chr_family_repeats <- sequence_repeats[sequence_repeats$new_class == chr_classes$class[k], ]
       chr_family_arrays <- arrays[arrays$new_class_num_ID == chr_classes$new_class_num_ID[k] & arrays$seqID == chromosomes[j], ]
+      cat(j, "/", length(chromosomes), k, "/", nrow(chr_classes), "arrays:", nrow(chr_family_arrays), "\n")
       # if(nrow(chr_family_arrays) == 0) next
       if(nrow(chr_family_repeats) == 0) next
       # What is the repeat size?
@@ -278,8 +281,8 @@ if (!no_heli) genes <- read.csv(genes_filtered_csv)
               
               overlaps <- as.data.frame(findOverlaps(gr3, gr2)) # gr2 are EDTA annotations
               if(nrow(overlaps) != 0) {
-                gap_starts <- sequence_edta$V4[overlaps$subjectHits]
-                gap_ends <- sequence_edta$V5[overlaps$subjectHits]
+                gap_starts <- sequence_edta$start[overlaps$subjectHits]
+                gap_ends <- sequence_edta$end[overlaps$subjectHits]
                 gap_overlaps <- unlist(lapply(seq_along(gap_starts), function(X) sum( (gap_starts[X] : gap_ends[X]) %in% (gaps_start[i_gap] : (gaps_start[i_gap] + gaps_size[i_gap])) )))
                 gap_overlaps_fraction <- gap_overlaps / gaps_size[i_gap]
                 if(sum(gap_overlaps_fraction) > 0.25) gaps_filled[i_gap] <- TRUE
@@ -300,7 +303,6 @@ if (!no_heli) genes <- read.csv(genes_filtered_csv)
       mean_centre_width_SD <- NULL
       centre_repeats_count <- NULL
       arrays_sizes <- NULL
-      cat(nrow(chr_family_arrays), "arrays:")
       for(array_id in seq_len(nrow(chr_family_arrays))) {
         # What is the repeat divergence within the central parts of the array?
         #   Calculation: central 50% repeats edit distance to THEIR consensus normalized by repeat mean length
@@ -326,10 +328,9 @@ if (!no_heli) genes <- read.csv(genes_filtered_csv)
         }
         
         sequences_to_align <- central_repeats$sequence[repeats_to_align_IDs]
-        cat(array_id, " (", nrow(array_repeats), " reps), ", sep = "")
         if(length(sequences_to_align) < 2) {
           cat("\n\n\n\n")
-          stop(paste0(" did not find repeats in one of the classes: ", classes$class[j], ", investigate"))
+          Message(paste0(" did not find repeats in one of the classes: ", classes$class[j], ", investigate"))
         }
         a <- capture.output({alignment_matrix = suppressWarnings(msa(sequences_to_align, method = "ClustalOmega", type = "dna"))})
         centre_consensus <- consensus_N(alignment_matrix, round(mean(nchar(sequences_to_align))))
@@ -341,7 +342,7 @@ if (!no_heli) genes <- read.csv(genes_filtered_csv)
         mean_centre_width_SD <- c(mean_centre_width_SD, sd(nchar(sequences_to_align)))
         centre_repeats_count <- c(centre_repeats_count, length(sequences_to_align))
       }
-      cat("\n")
+      # cat("\n")
       if(number_of_repeats_scored != 0) {
         chr_classes$centre_array_edit[k] <- cumulative_adist_score / number_of_repeats_scored ### PREDICTOR ###
         chr_classes$centre_array_width_sd[k] <- sum(mean_centre_width_SD * centre_repeats_count / sum(centre_repeats_count)) ### PREDICTOR ###
@@ -362,7 +363,7 @@ if (!no_heli) genes <- read.csv(genes_filtered_csv)
           }
         }
         sequences_to_align <- central_repeats$sequence[repeats_to_align_IDs]
-        cat("Chr ", chromosomes[j], ", class ", chr_classes$class[k],", central chromosome repeats (", nrow(chr_family_repeats), " reps)", sep = "")
+        # cat("Chr ", chromosomes[j], ", class ", chr_classes$class[k],", central chromosome repeats (", nrow(chr_family_repeats), " reps)", sep = "")
         
         # a <- capture.output({alignment_matrix = tolower(as.matrix(msa(sequences_to_align, method = "ClustalOmega", type = "dna")))})
         a <- capture.output({alignment_matrix = suppressWarnings(msa(sequences_to_align, method = "ClustalOmega", type = "dna"))})
@@ -430,7 +431,7 @@ if (!no_heli) genes <- read.csv(genes_filtered_csv)
         sequence_edta$dist_to_closest_rep <- 0
         
         for(seq_edta_id in seq_len(nrow(sequence_edta))) {
-          sequence_edta$dist_to_closest_rep[seq_edta_id] <- min(abs(sequence_edta$V4[seq_edta_id] - chr_family_repeats$start))
+          sequence_edta$dist_to_closest_rep[seq_edta_id] <- min(abs(sequence_edta$start[seq_edta_id] - chr_family_repeats$start))
         }
         
         chr_classes$t_test_p_val[k] <- -1
@@ -488,29 +489,5 @@ if (!no_heli) genes <- read.csv(genes_filtered_csv)
 
 # Save output
 write.csv(chr_classes, file = output_centromeric_scores, row.names = FALSE)  # Assuming scores_data is created in your code
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
