@@ -27,6 +27,7 @@ gene_raw_data <- read.table(gene_gff,
                             comment.char = "#",
                             blank.lines.skip = TRUE,
                             stringsAsFactors = FALSE)
+names(gene_raw_data) <- c("seqID", "source", "type", "start", "end", "score", "strand", "phase", "attributes")
 metadata <- read.csv(metadata_csv)
 
 # Rename TE seqID if needed
@@ -35,7 +36,7 @@ metadata$shortened_chr_name <- ""
 for (i in seq_along(unique(metadata$chromosome))) {
   metadata$new_chr_name[metadata$chromosome == unique(metadata$chromosome)[i]] <- paste0("Chr", i)
   metadata$shortened_chr_name[metadata$chromosome == unique(metadata$chromosome)[i]] <- strsplit(unique(metadata$chromosome)[i], split = " ")[[1]][1]
-  te_raw_data$seqID[te_raw_data$seqID == paste0("Chr", i)] <- strsplit(unique(metadata$chromosome)[i], split = " ")[[1]][1]
+  gene_raw_data$seqID[gene_raw_data$seqID == paste0("Chr", i)] <- strsplit(unique(metadata$chromosome)[i], split = " ")[[1]][1]
 }
 # --- Your parsing code here ---
 names(gene_raw_data) <- c("seqID", "source", "type", "start", "end", "score", "strand", "phase", "attributes")

@@ -50,7 +50,7 @@ if (!no_heli) genes <- read.csv(genes_filtered_csv)
 
 
 # Score
-
+all_scores <- data.frame()
 {
   chromosomes <- metadata_data$chromosome.name
   chromosomes_lengths <- metadata_data$size
@@ -59,11 +59,11 @@ if (!no_heli) genes <- read.csv(genes_filtered_csv)
   ### Decide which classes to score
   
   # Filtering variables
-  MIN_BP_TO_SCORE <- 1000
-  MIN_REPEAT_COUNT_TO_SCORE <- 3
+  MIN_BP_TO_SCORE <- 2000
+  MIN_REPEAT_COUNT_TO_SCORE <- 10
   MIN_REP_WIDTH_TO_SCORE <- 8
-  N_MAX_REP_PER_CHR <- 5
-  MAX_REPEATS_PER_CHROMOSOME <- 10
+  N_MAX_REP_PER_CHR <- 4
+  MAX_REPEATS_PER_CHROMOSOME <- 8
   
   # find top N_MAX_REP_PER_CHR classes for each chromosome
   top_N_unique <- NULL
@@ -127,6 +127,8 @@ if (!no_heli) genes <- read.csv(genes_filtered_csv)
       TE_coordinates <- unlist(TE_coordinates)
       length(TE_coordinates)
       length(unique(TE_coordinates))
+      TE_coordinates <- TE_coordinates[!is.na(TE_coordinates) & TE_coordinates > 0]
+      if(length(TE_coordinates) == 0) next
       # find arithmetic mean of all scores as the “peak”
       hist_EDTA <- hist(TE_coordinates, breaks = seq(min(TE_coordinates), max(TE_coordinates), length.out = 25), plot = FALSE)
       counts <- c(hist_EDTA$counts[1], hist_EDTA$counts[1], hist_EDTA$counts, hist_EDTA$counts[length(hist_EDTA$counts)], hist_EDTA$counts[length(hist_EDTA$counts)])
@@ -167,6 +169,9 @@ if (!no_heli) genes <- read.csv(genes_filtered_csv)
       gene_coordinates <- unlist(gene_coordinates)
       length(gene_coordinates)
       length(unique(gene_coordinates))
+
+      gene_coordinates <- gene_coordinates[!is.na(gene_coordinates) & gene_coordinates > 0]
+      if(length(gene_coordinates) == 0) next
       
       hist_gene <- hist(gene_coordinates, breaks = seq(min(gene_coordinates), max(gene_coordinates), length.out = 25), plot = FALSE)
       counts <- c(hist_gene$counts[1], hist_gene$counts[1], hist_gene$counts, hist_gene$counts[length(hist_gene$counts)], hist_gene$counts[length(hist_gene$counts)])
@@ -331,6 +336,7 @@ if (!no_heli) genes <- read.csv(genes_filtered_csv)
         if(length(sequences_to_align) < 2) {
           cat("\n\n\n\n")
           Message(paste0(" did not find repeats in one of the classes: ", classes$class[j], ", investigate"))
+          next
         }
         a <- capture.output({alignment_matrix = suppressWarnings(msa(sequences_to_align, method = "ClustalOmega", type = "dna"))})
         centre_consensus <- consensus_N(alignment_matrix, round(mean(nchar(sequences_to_align))))
@@ -446,48 +452,51 @@ if (!no_heli) genes <- read.csv(genes_filtered_csv)
         
       } 
     }
+    # adjust some scores
+  
+    chr_classes$centre_array_edit <- 100 - (100 * chr_classes$centre_array_edit / chr_classes$mean_length)
+    chr_classes$centre_array_width_sd <- 100 - (100 * chr_classes$centre_array_width_sd / chr_classes$mean_length)
+    chr_classes$centre_chromosome_edit <- 100 - (100 * chr_classes$centre_chromosome_edit / chr_classes$mean_length)
+    chr_classes$centre_chromosome_width_sd <- 100 - (100 * chr_classes$centre_chromosome_width_sd / chr_classes$mean_length)
+    
+    chr_classes$centre_array_edit[chr_classes$centre_array_edit > 100] = NA
+    chr_classes$centre_array_width_sd[chr_classes$centre_array_width_sd > 100] = NA
+    chr_classes$centre_chromosome_edit[chr_classes$centre_chromosome_edit > 100] = NA
+    chr_classes$centre_chromosome_width_sd[chr_classes$centre_chromosome_width_sd > 100] = NA
+    
+    chr_classes$centre_array_edit[chr_classes$centre_array_edit < 0] = NA
+    chr_classes$centre_array_width_sd[chr_classes$centre_array_width_sd < 0] = NA
+    chr_classes$centre_chromosome_edit[chr_classes$centre_chromosome_edit < 0] = NA
+    chr_classes$centre_chromosome_width_sd[chr_classes$centre_chromosome_width_sd < 0] = NA
+    
+    chr_classes$total_bp_norm_chr[chr_classes$total_bp_norm_chr < 0] = NA
+    chr_classes$total_bp_norm_rep[chr_classes$total_bp_norm_rep < 0] = NA
+    chr_classes$start_sd_norm_chr[chr_classes$start_sd_norm_chr < 0] = NA
+    chr_classes$start_norm_chr_0_50[chr_classes$start_norm_chr_0_50 < 0] = NA
+    chr_classes$gaps_count[chr_classes$gaps_count < 0] = 0
+    chr_classes$gaps_with_TEs_fraction[chr_classes$gaps_with_TEs_fraction < 0] = NA
+    
+    chr_classes$array_sizes_sd_norm_mean_arr_size[chr_classes$array_sizes_sd_norm_mean_arr_size < 0] = NA
+    chr_classes$array_count[chr_classes$array_count < 0] = NA
+    chr_classes$TE_prox_dist[chr_classes$TE_prox_dist < 0] = NA
+    chr_classes$TE_prox_SD[chr_classes$TE_prox_SD < 0] = NA
+    chr_classes$TE_lm_coef[chr_classes$TE_lm_coef == -1] = NA
+    chr_classes$TE_prox_score[chr_classes$TE_prox_score < 0] = NA
+    chr_classes$gene_prox_dist[chr_classes$gene_prox_dist < 0] = NA
+    chr_classes$gene_prox_SD[chr_classes$gene_prox_SD < 0] = NA
+    chr_classes$gene_lm_coef[chr_classes$gene_lm_coef == -1] = NA
+    chr_classes$gene_prox_score[chr_classes$gene_prox_score < 0] = NA
+    chr_classes$t_test_t_val[chr_classes$t_test_t_val == -1] = NA
+    chr_classes$t_test_p_val[chr_classes$t_test_p_val == -1] = NA
+
+    all_scores <- rbind(all_scores, chr_classes)
   }
-  # adjust some scores
   
-  chr_classes$centre_array_edit <- 100 - (100 * chr_classes$centre_array_edit / chr_classes$mean_length)
-  chr_classes$centre_array_width_sd <- 100 - (100 * chr_classes$centre_array_width_sd / chr_classes$mean_length)
-  chr_classes$centre_chromosome_edit <- 100 - (100 * chr_classes$centre_chromosome_edit / chr_classes$mean_length)
-  chr_classes$centre_chromosome_width_sd <- 100 - (100 * chr_classes$centre_chromosome_width_sd / chr_classes$mean_length)
-  
-  chr_classes$centre_array_edit[chr_classes$centre_array_edit > 100] = NA
-  chr_classes$centre_array_width_sd[chr_classes$centre_array_width_sd > 100] = NA
-  chr_classes$centre_chromosome_edit[chr_classes$centre_chromosome_edit > 100] = NA
-  chr_classes$centre_chromosome_width_sd[chr_classes$centre_chromosome_width_sd > 100] = NA
-  
-  chr_classes$centre_array_edit[chr_classes$centre_array_edit < 0] = NA
-  chr_classes$centre_array_width_sd[chr_classes$centre_array_width_sd < 0] = NA
-  chr_classes$centre_chromosome_edit[chr_classes$centre_chromosome_edit < 0] = NA
-  chr_classes$centre_chromosome_width_sd[chr_classes$centre_chromosome_width_sd < 0] = NA
-  
-  chr_classes$total_bp_norm_chr[chr_classes$total_bp_norm_chr < 0] = NA
-  chr_classes$total_bp_norm_rep[chr_classes$total_bp_norm_rep < 0] = NA
-  chr_classes$start_sd_norm_chr[chr_classes$start_sd_norm_chr < 0] = NA
-  chr_classes$start_norm_chr_0_50[chr_classes$start_norm_chr_0_50 < 0] = NA
-  chr_classes$gaps_count[chr_classes$gaps_count < 0] = 0
-  chr_classes$gaps_with_TEs_fraction[chr_classes$gaps_with_TEs_fraction < 0] = NA
-  
-  chr_classes$array_sizes_sd_norm_mean_arr_size[chr_classes$array_sizes_sd_norm_mean_arr_size < 0] = NA
-  chr_classes$array_count[chr_classes$array_count < 0] = NA
-  chr_classes$TE_prox_dist[chr_classes$TE_prox_dist < 0] = NA
-  chr_classes$TE_prox_SD[chr_classes$TE_prox_SD < 0] = NA
-  chr_classes$TE_lm_coef[chr_classes$TE_lm_coef == -1] = NA
-  chr_classes$TE_prox_score[chr_classes$TE_prox_score < 0] = NA
-  chr_classes$gene_prox_dist[chr_classes$gene_prox_dist < 0] = NA
-  chr_classes$gene_prox_SD[chr_classes$gene_prox_SD < 0] = NA
-  chr_classes$gene_lm_coef[chr_classes$gene_lm_coef == -1] = NA
-  chr_classes$gene_prox_score[chr_classes$gene_prox_score < 0] = NA
-  chr_classes$t_test_t_val[chr_classes$t_test_t_val == -1] = NA
-  chr_classes$t_test_p_val[chr_classes$t_test_p_val == -1] = NA
   
   
 }
 
 # Save output
-write.csv(chr_classes, file = output_centromeric_scores, row.names = FALSE)  # Assuming scores_data is created in your code
+write.csv(all_scores, file = output_centromeric_scores, row.names = FALSE)  # Assuming scores_data is created in your code
 
 

@@ -189,6 +189,7 @@ if (nrow(scores)) {
 
 classes_to_plot <- NULL
 if(nrow(scores)) {
+  scores$probability_centromeric <- scores$probability_centromeric * 100
   scores <- scores[order(scores$probability_centromeric, decreasing = TRUE), ]
   # scores <- scores[scores$probability_centromeric >= 0.01, ] # optional filtering
   for(j in unique(scores$chromosome)) {
@@ -199,7 +200,7 @@ if(nrow(scores)) {
   }
 } 
 cat("Classes to plot:", classes_to_plot, "\n")
-  
+
 
 
 
@@ -245,7 +246,7 @@ for(k in 1 : length(chromosomes_sets)) {
          heights = c(700, rep(c(200,400,300,300),length(chromosomes))))
   
   par(mar = c(0.5,2,0.2,0.2), mgp = c(0.5, 0.5, 0), oma = c(2, 3, 3, 4))
-  cex_factor <- 1.7
+  cex_factor <- 2.2
   # ------------------------------------------------------------------ #
   #  TITLE
   # ------------------------------------------------------------------ #
@@ -295,7 +296,7 @@ for(k in 1 : length(chromosomes_sets)) {
   # ------------------------------------------------------------------ #
   #  PER-CHROMOSOME LOOP
   # ------------------------------------------------------------------ #
-
+  
   for (j in seq_along(chromosomes)) {
     chr <- chromosomes[j]
     len <- chromosomes_len[j]
@@ -316,14 +317,17 @@ for(k in 1 : length(chromosomes_sets)) {
     
     
     # === TABLE ===
-    if (nrow(scores)) {
+    if (nrow(scores) > 0) {
       sc <- subset(scores, chromosome == chr)[, c("class","count","mean_length","total_bp",
                                                   "ed_perc","width_sd_perc","probability_centromeric")]
-      sc[, 3:7] <- round(sc[, 3:7], 2)
+      sc <- sc[sc$class %in% classes_to_plot,]
+      sc[, 3:6] <- round(sc[, 3:6], 2)
+      sc[, 7] <- round(sc[, 7], 2)
       sc$colours <- palette[match(sc$class, classes_to_plot)]
       create_table(sc[,1:7], c("Class","Repeats no","Mean width, bp","Total bp",
                                "Sequence similarity %","Width similarity %","Cen probability"),
-                   colours = sc$colours)
+                   colours = sc$colours,
+                   font_size = cex_factor* 1.2)
     } else plot.new()
     
     # === PLOT A: Repeats + GC + families ===
@@ -340,14 +344,14 @@ for(k in 1 : length(chromosomes_sets)) {
     gc_chs_data <- gc_data[gc_data$chromosome == chr,]
     gc_mids <- gc_chs_data$bin_mid
     gc_vals <- gc_chs_data$bin_value
-    lines(gc_mids, gc_vals, type = "l", lwd = 1)
+    lines(gc_mids, gc_vals, type = "l", lwd = 2, cex = cex_factor * 1)
     mtext("GC%            per  2 Kbp", side = 2, line = 2, col = "black", cex = cex_factor* 0.5, at = 10, adj = 0)
     
     # CTW (TODO only if requested)
     ctw_chs_data <- ctw_data[ctw_data$chromosome == chr,]
     ctw_mids <- ctw_chs_data$bin_mid
     ctw_vals <- ctw_chs_data$bin_value
-    lines(x = ctw_mids, ctw_vals, type = "l", col = "#FFA500",lwd = 1)
+    lines(x = ctw_mids, ctw_vals, type = "l", col = "#FFA500", lwd = 2, cex = cex_factor * 1)
     mtext("CTW            per  2 Kbp D10", side = 2, line = 3, col = "#FFA500", cex = cex_factor* 0.5, at = 10, adj = 0)
     
     
@@ -358,7 +362,7 @@ for(k in 1 : length(chromosomes_sets)) {
         if (!nrow(fam)) next
         cov <- calculate.repeats.percentage.in.windows(win_rep, fam$start, fam$width, len)
         cov[cov == 0] <- NA; cov[cov > 100] <- 100
-        lines(win_rep, cov, col = palette[k], pch=16, type="o")
+        lines(win_rep, cov, col = palette[k], pch=16, type="o", lwd = 2, cex = cex_factor * 2)
       }
       mtext("SIG REP% per 10 Kbp", side = 2, line = 1, col = "#88CCEE", cex = cex_factor* 0.5, at = 10, adj = 0)
     }
@@ -378,11 +382,11 @@ for(k in 1 : length(chromosomes_sets)) {
     # EDTA classes
     if (!no_edta && nrow(edt_chr)) {
       for (k in rev(seq_along(edta_classes))) {
-        cls <- edt_chr[edt_chr$start %in% edta_classes[[k]], ]
+        cls <- edt_chr[edt_chr$type %in% edta_classes[[k]], ]
         if (!nrow(cls)) next
         cov <- calculate.repeats.percentage.in.windows(win_edta, cls$end, cls$width, len)
         cov[cov == 0] <- NA; cov[cov > 100] <- 100
-        lines(win_edta + (bin_edta/2), cov, col = edta_classes_colours[k], pch=16, type="o")
+        lines(win_edta + (bin_edta/2), cov, col = edta_classes_colours[k], pch=16, type="o", lwd = 2, cex = cex_factor * 1)
       }
       mtext("FAM EDTA%  per 100 Kbp", side = 2, line = 1, col = "red", cex = cex_factor* 0.5, at = 10, adj = 0)
     }
@@ -392,6 +396,7 @@ for(k in 1 : length(chromosomes_sets)) {
     if (!no_edta && nrow(edt_chr)) te_coords <- c(te_coords, unlist(mapply(`:`, edt_chr$start, edt_chr$end)))
     if (nrow(rep_chr))          te_coords <- c(te_coords, unlist(mapply(`:`, rep_chr$start, rep_chr$end)))
     if (length(te_coords)) {
+      te_coords <- te_coords[te_coords <= len & te_coords >= 1]
       te_hist <- hist(te_coords, breaks = seq(0, len, length.out = bin_gene), plot = FALSE)
       te_ma   <- ma(c(te_hist$counts[1], te_hist$counts[1], te_hist$counts,
                       te_hist$counts[length(te_hist$counts)], te_hist$counts[length(te_hist$counts)]))[3:(length(te_hist$counts)+2)]
@@ -416,6 +421,7 @@ for(k in 1 : length(chromosomes_sets)) {
     # Gene valley
     if (!no_heli && nrow(gen_chr)) {
       gen_coords <- unlist(mapply(`:`, gen_chr$start, gen_chr$end))
+      gen_coords <- gen_coords[gen_coords <= len & gen_coords >= 1]
       gen_hist <- hist(gen_coords, breaks = seq(0, len, length.out = bin_gene), plot = FALSE)
       gen_ma   <- ma(c(gen_hist$counts[1], gen_hist$counts[1], gen_hist$counts,
                        gen_hist$counts[length(gen_hist$counts)], gen_hist$counts[length(gen_hist$counts)]))[3:(length(gen_hist$counts)+2)]
