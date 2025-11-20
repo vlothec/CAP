@@ -218,6 +218,7 @@ all_scores <- data.frame()
     
     ### Calculate predictor values ===============================================
     print("predictors")
+    if(nrow(chr_classes) == 0) next
     chr_classes$chromosome <- chromosomes[j]
     chr_classes$total_bp_norm_chr <- -1
     chr_classes$total_bp_norm_rep <- -1

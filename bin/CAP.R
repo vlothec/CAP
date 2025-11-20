@@ -199,8 +199,10 @@ if(nrow(scores)) {
     classes_to_plot <- c(classes_to_plot, chr_scores$class[seq_len(min(4, nrow(chr_scores)))])
   }
 } 
+classes_to_plot <- unique(classes_to_plot)
+classes_to_score <- classes$importance[classes$class %in% classes_to_plot]
+classes_to_plot <- classes_to_plot[order(classes_to_score, decreasing = T)]
 cat("Classes to plot:", classes_to_plot, "\n")
-
 
 
 
@@ -246,7 +248,7 @@ for(k in 1 : length(chromosomes_sets)) {
          heights = c(700, rep(c(200,400,300,300),length(chromosomes))))
   
   par(mar = c(0.5,2,0.2,0.2), mgp = c(0.5, 0.5, 0), oma = c(2, 3, 3, 4))
-  cex_factor <- 2.2
+  cex_factor <- 1
   # ------------------------------------------------------------------ #
   #  TITLE
   # ------------------------------------------------------------------ #
@@ -357,12 +359,12 @@ for(k in 1 : length(chromosomes_sets)) {
     
     # Families
     if (length(classes_to_plot)) {
-      for (k in seq_len(length(classes_to_plot))) {
-        fam <- subset(rep_chr, new_class == classes_to_plot[k])
+      for (m in seq_len(length(classes_to_plot))) {
+        fam <- subset(rep_chr, new_class == classes_to_plot[m])
         if (!nrow(fam)) next
         cov <- calculate.repeats.percentage.in.windows(win_rep, fam$start, fam$width, len)
         cov[cov == 0] <- NA; cov[cov > 100] <- 100
-        lines(win_rep, cov, col = palette[k], pch=16, type="o", lwd = 2, cex = cex_factor * 2)
+        lines(win_rep, cov, col = palette[m], pch=16, type="o", lwd = 2, cex = cex_factor * 1)
       }
       mtext("SIG REP% per 10 Kbp", side = 2, line = 1, col = "#88CCEE", cex = cex_factor* 0.5, at = 10, adj = 0)
     }
@@ -381,12 +383,12 @@ for(k in 1 : length(chromosomes_sets)) {
     
     # EDTA classes
     if (!no_edta && nrow(edt_chr)) {
-      for (k in rev(seq_along(edta_classes))) {
-        cls <- edt_chr[edt_chr$type %in% edta_classes[[k]], ]
+      for (m in rev(seq_along(edta_classes))) {
+        cls <- edt_chr[edt_chr$type %in% edta_classes[[m]], ]
         if (!nrow(cls)) next
         cov <- calculate.repeats.percentage.in.windows(win_edta, cls$end, cls$width, len)
         cov[cov == 0] <- NA; cov[cov > 100] <- 100
-        lines(win_edta + (bin_edta/2), cov, col = edta_classes_colours[k], pch=16, type="o", lwd = 2, cex = cex_factor * 1)
+        lines(win_edta + (bin_edta/2), cov, col = edta_classes_colours[m], pch=16, type="o", lwd = 2, cex = cex_factor * 1)
       }
       mtext("FAM EDTA%  per 100 Kbp", side = 2, line = 1, col = "red", cex = cex_factor* 0.5, at = 10, adj = 0)
     }
@@ -441,95 +443,50 @@ for(k in 1 : length(chromosomes_sets)) {
   
 }
 
-
-# ------------------------------------------------------------------ #
-#  DOT-PLOT & FINAL TABLE
-# ------------------------------------------------------------------ #
-
-if(T) {
-  classes_to_plot <- data.frame(class = classes_to_plot,
-                                consensus = classes$consensus[match(classes_to_plot, classes$class)],
-                                count = classes$count[match(classes_to_plot, classes$class)],
-                                stringsAsFactors = FALSE)
-  
-  classes_to_plot$colour <- palette[1:nrow(classes_to_plot)]
-  classes_to_plot <- classes_to_plot[classes_to_plot$count > 50, ]
-  
-  if (nrow(classes_to_plot)) {
-    
-    cons_seq <- paste(classes_to_plot$consensus, collapse = "")
-    rev_seq  <- revCompString(cons_seq)
-    full_seq <- paste(cons_seq, rev_seq, sep = "")
-    divs     <- cumsum(nchar(classes_to_plot$consensus))
-    divs_rc  <- divs + nchar(cons_seq)
-    
-    # plot_name <- output_cap_dotplot
-    plot_name <- file.path(paste0(assembly_name, "_CAP_dotplot.png"))
-    png(plot_name, width = nchar(full_seq), height = nchar(full_seq))
-    dotPlot(strsplit(full_seq, "")[[1]], strsplit(full_seq, "")[[1]],
-            wsize = 4, wstep = 1, nmatch = 4,
-            col = c("white","black"), xlab = "n", ylab = "n",
-            cex = cex_factor* 10, xaxt = "n", yaxt = "n", lwd = 3)
-    
-    abline(v = c(1, divs, divs_rc), col = classes_to_plot$colour, lwd = 12)
-    abline(h = c(1, divs, divs_rc), col = classes_to_plot$colour, lwd = 12)
-    abline(v = rev(divs_rc)[1:nrow(classes_to_plot)], col = classes_to_plot$colour, lwd = 12)
-    abline(h = rev(divs_rc)[1:nrow(classes_to_plot)], col = classes_to_plot$colour, lwd = 12)
-    abline(v = nchar(cons_seq), h = nchar(cons_seq), col = "black", lwd = 24)
-    
-    dev.off()
-    message("DONE: ", plot_name)
-    
-  }
-  
-}
-
-
 write.csv(classes_to_plot, file = file.path(paste0(assembly_name, "_CAP_repeat_families.csv")), row.names = FALSE)
-write.csv(classes_to_plot, file = file.path(paste0(assembly_name, "_CAP_model.txt")), row.names = FALSE)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # ------------------------------------------------------------------ #
 #  Make the text output data
 # ------------------------------------------------------------------ #
+chromosomes     <- chr_info$chromosome.name
+chromosomes_len <- chr_info$size
+chromosome_CAP_data <- data.frame(chromosome = chromosomes, 
+                                  chromosome_length = chromosomes_len)
+chromosome_CAP_data$top_scoring_class = ""
+chromosome_CAP_data$probability_of_top_scoring_class_is_centromeric = 0
+for(j in seq_along(chromosomes)) {
+  chr_classes <- scores[scores$chromosome == chromosomes[j], ]
+  if(nrow(chr_classes) == 0) next
+  chromosome_CAP_data$top_scoring_class[j] <- chr_classes$class[which.max(chr_classes$probability_centromeric)]
+  chromosome_CAP_data$probability_of_top_scoring_class_is_centromeric[j] <- round(max(chr_classes$probability_centromeric))
+}
+cen_sats <- unique(scores$class[scores$probability_centromeric > 50])
+
+summary_line1 <- paste0(assembly_name, ": probability of monocentric satellite organisation: ", round(mean(chromosome_CAP_data$probability_of_top_scoring_class_is_centromeric)), "%")
+summary_line2 <- paste0("Chromosomes with over 50% probability of monocentric satellite: ", 
+                        sum(chromosome_CAP_data$probability_of_top_scoring_class_is_centromeric > 50), "/", 
+                        nrow(chromosome_CAP_data))
+summary_line3 <- paste0("Most likely centromeric families: ")
+
+# Prepare all output lines
+output_file <- file.path(paste0(assembly_name, "_CAP_model.txt"))
+output_lines <- c(summary_line1, summary_line2, summary_line3)
+
+for(j in seq_along(cen_sats)) {
+  summary_line_extra <- paste0(cen_sats[j], ": present on ", length(unique(scores$chromosome[scores$class == cen_sats[j]])), 
+                               " chromosomes, with average score of ", round(mean(scores$probability_centromeric[scores$class == cen_sats[j]])),
+                               "%, incliding ", sum(scores$probability_centromeric[scores$class == cen_sats[j]] > 50), " chromosomes with score above 50%")
+  output_lines <- c(output_lines, summary_line_extra)
+}
+output_lines <- c(output_lines, "########################", "")
+
+# Write all lines at once
+writeLines(output_lines, output_file)
+
+# Append the data frame
+suppressWarnings(write.table(chromosome_CAP_data, file = output_file, append = TRUE, sep = "\t", row.names = FALSE, quote = FALSE))
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Save outputs
-# write.csv(repeat_families_data, file = output_cap_repeat_families, row.names = FALSE)  # Assuming created in code
-# writeLines(model_text, con = output_cap_model)  # Assuming text output
