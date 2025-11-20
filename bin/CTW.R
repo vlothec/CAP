@@ -46,21 +46,30 @@ for(i in seq_along(fasta)) {
   window.starts.CTW = round((0 : bins) * bin_size)
   window.ends.CTW <- window.starts.CTW[-1]
   window.starts.CTW <- c(window.starts.CTW[-length(window.starts.CTW)]) + 1
-  CTW.values =  lapply(seq_along(window.starts.CTW), function(X) CTW(as.character(subseq(fasta[[i]], window.starts.CTW[X], window.ends.CTW[X])), depth = 10, desired_alphabet = NULL, beta = NULL))
-  log2e <- log(2,base=exp(1))
-  CTW.values <- unlist(CTW.values)
-  CTW.values = CTW.values * -log2e
-  actual_bin_sizes <- window.ends.CTW - window.starts.CTW + 1
-  CTW.values <- CTW.values / (actual_bin_sizes - 10)
-  CTW.values[CTW.values > 1] = 1
-  CTW.values[CTW.values < 0] = 0
-  CTW.values = CTW.values * 100
   mids <- (window.starts.CTW + window.ends.CTW) / 2
   mids <- window.starts.CTW + bin_edta/2
+  if(FALSE) {
+    CTW.values =  lapply(seq_along(window.starts.CTW), function(X) CTW(as.character(subseq(fasta[[i]], window.starts.CTW[X], window.ends.CTW[X])), depth = 10, desired_alphabet = NULL, beta = NULL))
+    log2e <- log(2,base=exp(1))
+    CTW.values <- unlist(CTW.values)
+    CTW.values = CTW.values * -log2e
+    actual_bin_sizes <- window.ends.CTW - window.starts.CTW + 1
+    CTW.values <- CTW.values / (actual_bin_sizes - 10)
+    CTW.values[CTW.values > 1] = 1
+    CTW.values[CTW.values < 0] = 0
+    CTW.values = CTW.values * 100
+    
+    ctw_data <- rbind(ctw_data, data.frame(chromosome = rep(metadata_data$chromosome.name[i], length(mids)),
+                                          bin_mid = mids,
+                                          bin_value = CTW.values))
+  } else {
+    message("CTW calculation is disabled to save time; filling with zeros.")
+  }
   
+
   ctw_data <- rbind(ctw_data, data.frame(chromosome = rep(metadata_data$chromosome.name[i], length(mids)),
                                          bin_mid = mids,
-                                         bin_value = CTW.values))
+                                         bin_value = rep(0, length(mids))))
   
 }
 
