@@ -460,59 +460,62 @@ for(k in seq_along(chromosomes_sets)) {
       kmers_data_chr$bin_start <- kmers_data_chr$dist_start_ * kmers_data_chr$binwidth_
       kmers_data_chr$bin_mid <- kmers_data_chr$bin_start + kmers_data_chr$binwidth_/2
       kmers_data_chr$bin_end <- kmers_data_chr$bin_start + kmers_data_chr$binwidth_
-      
+      getout = FALSE
       if(!(1 %in% kmers_data_chr$cutoff_)) {
         message(paste0("Kmer data for ", chr, " does not have cutoff 1, skipping kmer plotting for this chromosome"))
-        next
+        getout = TRUE
       }
       if(!(25 %in% kmers_data_chr$cutoff_)) {
         message(paste0("Kmer data for ", chr, " does not have cutoff 25, skipping kmer plotting for this chromosome"))
-        next
+        getout = TRUE
       }
       if(!(50 %in% kmers_data_chr$cutoff_)) {
         message(paste0("Kmer data for ", chr, " does not have cutoff 50, skipping kmer plotting for this chromosome"))
-        next
+        getout = TRUE
       }
       if(!(75 %in% kmers_data_chr$cutoff_)) {
         message(paste0("Kmer data for ", chr, " does not have cutoff 75, skipping kmer plotting for this chromosome"))
-        next
+        getout = TRUE
       }
       if(!(90 %in% kmers_data_chr$cutoff_)) {
         message(paste0("Kmer data for ", chr, " does not have cutoff 90, skipping kmer plotting for this chromosome"))
-        next
+        getout = TRUE
       }
-      kmers_data_1 <- kmers_data_chr[kmers_data_chr$cutoff_ == 1,]
-      kmers_data_25 <- kmers_data_chr[kmers_data_chr$cutoff_ == 25,]
-      kmers_data_50 <- kmers_data_chr[kmers_data_chr$cutoff_ == 50,]
-      kmers_data_75 <- kmers_data_chr[kmers_data_chr$cutoff_ == 75,]
-      kmers_data_90 <- kmers_data_chr[kmers_data_chr$cutoff_ == 90,]
-      
-      kmers_data_averaged <- unlist(lapply(
-        seq_len(nrow(kmers_data_1)),
-        function(X) {
-          mean(c(kmers_data_1$occupancy_freq_[X],
-                 kmers_data_25$occupancy_freq_[X],
-                 kmers_data_50$occupancy_freq_[X],
-                 kmers_data_75$occupancy_freq_[X],
-                 kmers_data_90$occupancy_freq_[X]))
-        }))
-      kmers_data_averaged_100kb <- (kmers_data_averaged[1 : (length(kmers_data_averaged) - 1)] + kmers_data_averaged[2 : length(kmers_data_averaged)]) / 2
-      if (length(kmers_data_averaged_100kb) > 0) {
-        kmers_data_averaged_100kb <- kmers_data_averaged_100kb[seq(1, length(kmers_data_averaged_100kb), by = 2)]
-      }
-      kmers_data_averaged_100kb <- c(kmers_data_averaged_100kb, kmers_data_averaged[length(kmers_data_averaged)])
-      
-      if(length(kmers_data_averaged_100kb) != 0) {
-        color_func <- colorRamp(c("white", "yellow", "orange", "red"))
-        rgb_vals <- color_func(kmers_data_averaged_100kb)
-        if(length(rgb_vals) == 0) next
-        # Replace NA values in rgb_vals with white (255, 255, 255)
-        rgb_vals[is.na(rgb_vals)] <- 255
-        colors <- rgb(rgb_vals[,1], rgb_vals[,2], rgb_vals[,3], maxColorValue = 255, alpha = 150)
-        for(window_plot in seq_along(win_edta)) {
-          rect(xleft = win_edta[window_plot] - 50000, ybottom = 0, xright = win_edta[window_plot] + 50000, ytop = 100, col = colors[window_plot], border = NA)
+      if(!getout) {
+        kmers_data_1 <- kmers_data_chr[kmers_data_chr$cutoff_ == 1,]
+        kmers_data_25 <- kmers_data_chr[kmers_data_chr$cutoff_ == 25,]
+        kmers_data_50 <- kmers_data_chr[kmers_data_chr$cutoff_ == 50,]
+        kmers_data_75 <- kmers_data_chr[kmers_data_chr$cutoff_ == 75,]
+        kmers_data_90 <- kmers_data_chr[kmers_data_chr$cutoff_ == 90,]
+        
+        kmers_data_averaged <- unlist(lapply(
+          seq_len(nrow(kmers_data_1)),
+          function(X) {
+            mean(c(kmers_data_1$occupancy_freq_[X],
+                  kmers_data_25$occupancy_freq_[X],
+                  kmers_data_50$occupancy_freq_[X],
+                  kmers_data_75$occupancy_freq_[X],
+                  kmers_data_90$occupancy_freq_[X]))
+          }))
+        kmers_data_averaged_100kb <- (kmers_data_averaged[1 : (length(kmers_data_averaged) - 1)] + kmers_data_averaged[2 : length(kmers_data_averaged)]) / 2
+        if (length(kmers_data_averaged_100kb) > 0) {
+          kmers_data_averaged_100kb <- kmers_data_averaged_100kb[seq(1, length(kmers_data_averaged_100kb), by = 2)]
+        }
+        kmers_data_averaged_100kb <- c(kmers_data_averaged_100kb, kmers_data_averaged[length(kmers_data_averaged)])
+        
+        if(length(kmers_data_averaged_100kb) != 0) {
+          color_func <- colorRamp(c("white", "yellow", "orange", "red"))
+          rgb_vals <- color_func(kmers_data_averaged_100kb)
+          if(length(rgb_vals) == 0) next
+          # Replace NA values in rgb_vals with white (255, 255, 255)
+          rgb_vals[is.na(rgb_vals)] <- 255
+          colors <- rgb(rgb_vals[,1], rgb_vals[,2], rgb_vals[,3], maxColorValue = 255, alpha = 150)
+          for(window_plot in seq_along(win_edta)) {
+            rect(xleft = win_edta[window_plot] - 50000, ybottom = 0, xright = win_edta[window_plot] + 50000, ytop = 100, col = colors[window_plot], border = NA)
+          }
         }
       }
+      
       
     }
     for(window_plot in seq_along(win_edta)) {
