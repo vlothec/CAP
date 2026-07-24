@@ -364,16 +364,22 @@ for(k in seq_along(chromosomes_sets)) {
     
     # === TABLE ===
     if (nrow(scores) > 0) {
+      #sc <- subset(scores, chromosome == chr)[, c("class","count","mean_length","total_bp",
+      #                                            "ed_perc","width_sd_perc","probability_centromeric")]
       sc <- subset(scores, chromosome == chr)[, c("class","count","mean_length","total_bp",
-                                                  "ed_perc","width_sd_perc","probability_centromeric")]
+                                                  "ed_perc","width_sd_perc")]
       sc <- sc[sc$class %in% classes_to_plot,]
       sc[, 3:6] <- round(sc[, 3:6], 2)
-      sc[, 7] <- round(sc[, 7], 2)
+      # sc[, 7] <- round(sc[, 7], 2)
       sc$colours <- palette[match(sc$class, classes_to_plot)]
-      create_table(sc[,1:7], c("Class","Repeats no","Mean width, bp","Total bp",
-                               "Sequence similarity %","Width similarity %","Cen probability"),
+      create_table(sc[,1:6], c("Class","Repeats no","Mean width, bp","Total bp",
+                               "Sequence similarity %","Width similarity %"),
                    colours = sc$colours,
                    font_size = cex_factor* 1.2)
+      #create_table(sc[,1:7], c("Class","Repeats no","Mean width, bp","Total bp",
+      #                         "Sequence similarity %","Width similarity %","Cen probability"),
+      #             colours = sc$colours,
+      #             font_size = cex_factor* 1.2)
     } else {
       plot.new()
     }
