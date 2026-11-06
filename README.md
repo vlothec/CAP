@@ -3,8 +3,8 @@
 **CAP** is a Nextflow pipeline for centromere prediction and repeat analysis in genomic assemblies. It integrates **TRASH_2** for tandem-repeat detection, processes transposon and gene annotations to help with identification of centromeric sequences.
 
 Currently supported annotations:
-Transposable elements: EDTA
-Genes: Helixer
+- Transposable elements: EDTA
+- Genes: Helixer
 
 
 ## AppImage quick start
