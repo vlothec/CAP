@@ -1,24 +1,11 @@
 # CAP: Centromere Analysis Pipeline
 
-**CAP** is a Nextflow pipeline for centromere prediction and repeat analysis in genomic assemblies. It integrates **TRASH_2** for tandem-repeat detection, processes optional transposon and gene annotations, and produces plots and tables.
+**CAP** is a Nextflow pipeline for centromere prediction and repeat analysis in genomic assemblies. It integrates **TRASH_2** for tandem-repeat detection, processes transposon and gene annotations to help with identification of centromeric sequences.
 
-## Published v1.0.3 artifacts
+Currently supported annotations:
+Transposable elements: EDTA
+Genes: Helixer
 
-The current immutable Linux release artifacts are:
-
-```text
-AppImage: CAP-v1.0.3-x86_64.AppImage
-SHA-256: c4b586e6dc1d73fd80cbdb6d7a141051164b8aafb72e9b8327328fcb477f12fc
-
-OCI: ghcr.io/mellifluousjdg/cap:1.0.3
-Digest: sha256:2563036a264a3d7b72bba57215229df599af15a36ae0c4d7155b70a3127b6f95
-
-Source: ghcr.io/mellifluousjdg/cap-source:1.0.3
-Digest: sha256:33daf3e3b1b90011201c528d93b3bd86052258cf9a410bb1d1376c4a2a0699e0
-```
-
-See `docs/OCI_RELEASE.md` for the source archive size and SHA-256 and for the
-manual publication and verification procedure.
 
 ## AppImage quick start
 
@@ -256,37 +243,6 @@ make test-conda \
   RESULTS_DIR=/tmp/cap-results \
   WORK_DIR=/tmp/cap-work
 ```
-
-## Updating dependencies and the Linux lock
-
-`environment.yml` is the human-maintained dependency specification. `conda-linux-64.lock` is the exact tested Linux x86-64 artifact and should not be edited casually.
-
-When dependencies must change:
-
-1. edit `environment.yml` intentionally;
-2. solve a fresh Linux x86-64 environment using only its declared channels;
-3. test imports and model loading, including scikit-learn and XGBoost compatibility;
-4. compile CTW/BCT;
-5. run `make test-conda` and investigate every output difference;
-6. export exact package URLs from the validated environment:
-
-   ```bash
-   conda list -n cap-pipeline --explicit > conda-linux-64.lock
-   ```
-
-7. from a fresh recursive clone containing the candidate lock, create a
-   disposable environment from that lock and run the complete smoke test:
-
-   ```bash
-   conda create -n cap-lock-test --file conda-linux-64.lock
-   make compile ENV_NAME=cap-lock-test
-   make test-conda ENV_NAME=cap-lock-test
-   ```
-
-8. update `test/expected-results.sha256` only when output changes are understood and approved;
-9. commit dependency specifications, lock changes, and intentional output-baseline changes separately where practical.
-
-The lock must not contain local filesystem paths or private package URLs. Review the generated file before committing it.
 
 ## Outputs
 
