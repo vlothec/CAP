@@ -1,0 +1,30 @@
+#!/bin/bash
+
+set -euo pipefail
+
+APPDIR="${APPDIR:-$(cd -- "$(dirname -- "$0")" && pwd)}"
+CAP_DIR="$APPDIR/usr/lib/cap"
+
+export PATH="$APPDIR/usr/bin${PATH:+:$PATH}"
+export LD_LIBRARY_PATH="$APPDIR/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export JAVA_HOME="$APPDIR/usr/lib/jvm"
+export LANG="${LANG:-C.UTF-8}"
+export LC_ALL="${LC_ALL:-C.UTF-8}"
+export NXF_ANSI_LOG="${NXF_ANSI_LOG:-false}"
+export NXF_BIN="$APPDIR/usr/share/nextflow/dist/26.04.6/nextflow-26.04.6-one.jar"
+export NXF_HOME="${NXF_HOME:-${XDG_CACHE_HOME:-$HOME/.cache}/cap-nextflow}"
+export MAFFT_BINARIES="$APPDIR/usr/libexec/mafft"
+export R_HOME="$APPDIR/usr/lib/R"
+export R_HOME_DIR="$R_HOME"
+export R_SHARE_DIR="$R_HOME/share"
+export R_INCLUDE_DIR="$R_HOME/include"
+export R_DOC_DIR="$R_HOME/doc"
+
+if [ "${1:-}" = "--shell" ]; then
+    shift
+    exec /bin/bash "$@"
+fi
+if [ "${1:-}" = "nextflow" ]; then
+    exec "$@"
+fi
+exec nextflow run "$CAP_DIR" "$@"

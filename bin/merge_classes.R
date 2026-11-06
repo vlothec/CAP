@@ -20,6 +20,9 @@ output_genome_classes <- args[5]
 repeats <- read.csv(repeats_filtered_csv)
 arrays <- read.csv(arrays_filtered_csv)
 
+# Stabilize random repeat subsampling across runs.
+set.seed(0)
+
 # Load libraries
 suppressMessages({
   library(seqinr)

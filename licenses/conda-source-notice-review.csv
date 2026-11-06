@@ -1,0 +1,22 @@
+name,version,build,resolution,canonical_license_files,review_note
+bioconductor-biocgenerics,0.52.0,r44hdfd78af_3,R-shared-license,Artistic-2.0,DESCRIPTION declares Artistic-2.0; preserve canonical text(s) from exact R runtime.
+bioconductor-biostrings,2.74.0,r44h3df3fcb_1,R-shared-license,Artistic-2.0,DESCRIPTION declares Artistic-2.0; preserve canonical text(s) from exact R runtime.
+bioconductor-data-packages,20260207,hdfd78af_1,recipe-license-declaration,,Exact recipe declares MIT but embeds no license text; preserve exact recipe and two-file helper payload as packaging evidence.
+bioconductor-genomeinfodb,1.42.0,r44hdfd78af_2,R-shared-license,Artistic-2.0,DESCRIPTION declares Artistic-2.0; preserve canonical text(s) from exact R runtime.
+bioconductor-genomeinfodbdata,1.2.13,r44hdfd78af_0,R-shared-license,Artistic-2.0,DESCRIPTION declares Artistic-2.0; preserve canonical text(s) from exact R runtime.
+bioconductor-genomicranges,1.58.0,r44h3df3fcb_2,R-shared-license,Artistic-2.0,DESCRIPTION declares Artistic-2.0; preserve canonical text(s) from exact R runtime.
+bioconductor-iranges,2.40.0,r44h3df3fcb_2,R-shared-license,Artistic-2.0,DESCRIPTION declares Artistic-2.0; preserve canonical text(s) from exact R runtime.
+bioconductor-s4vectors,0.44.0,r44h3df3fcb_2,R-shared-license,Artistic-2.0,DESCRIPTION declares Artistic-2.0; preserve canonical text(s) from exact R runtime.
+bioconductor-ucsc.utils,1.2.0,r44h9ee0642_1,R-shared-license,Artistic-2.0,DESCRIPTION declares Artistic-2.0; preserve canonical text(s) from exact R runtime.
+bioconductor-xvector,0.46.0,r44h15a9599_2,R-shared-license,Artistic-2.0,DESCRIPTION declares Artistic-2.0; preserve canonical text(s) from exact R runtime.
+r-ade4,1.7_24,r44h3704496_0,R-shared-license,GPL-2 | GPL-3,DESCRIPTION declares GPL (>= 2); preserve canonical text(s) from exact R runtime.
+r-codetools,0.2_20,r44hc72bb7e_2,R-shared-license,GPL-2 | GPL-3,DESCRIPTION declares GPL; preserve canonical text(s) from exact R runtime.
+r-digest,0.6.39,r44h3697838_0,R-shared-license,GPL-2 | GPL-3,DESCRIPTION declares GPL (>= 2); preserve canonical text(s) from exact R runtime.
+r-doparallel,1.0.17,r44hc72bb7e_4,R-shared-license,GPL-2,DESCRIPTION declares GPL-2; preserve canonical text(s) from exact R runtime.
+r-mime,0.13,r44h54b55ab_1,R-shared-license,GPL-2 | GPL-3,DESCRIPTION declares GPL; preserve canonical text(s) from exact R runtime.
+r-pixmap,0.4_14,r44hc72bb7e_1,R-shared-license,GPL-2,DESCRIPTION declares GPL-2; preserve canonical text(s) from exact R runtime.
+r-rcpp,1.1.2,r44h3697838_0,R-shared-license,GPL-2 | GPL-3,DESCRIPTION declares GPL (>=2); preserve canonical text(s) from exact R runtime.
+r-segmented,2.2_1,r44hc72bb7e_0,R-shared-license,GPL-2 | GPL-3,DESCRIPTION declares GPL; preserve canonical text(s) from exact R runtime.
+r-seqinr,4.2_44,r44h1c8cec4_0,R-shared-license,GPL-2 | GPL-3,DESCRIPTION declares GPL (>= 2); preserve canonical text(s) from exact R runtime.
+r-sp,2.2_3,r44h54b55ab_0,R-shared-license,GPL-2 | GPL-3,DESCRIPTION declares GPL (>= 2); preserve canonical text(s) from exact R runtime.
+r-stringdist,0.9.17,r44h54b55ab_0,R-shared-license,GPL-3,DESCRIPTION declares GPL-3; preserve canonical text(s) from exact R runtime.

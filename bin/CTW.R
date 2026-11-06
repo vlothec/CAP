@@ -19,6 +19,7 @@ if (.Platform$OS.type == "windows" && !file.exists(binary_path)) {
   binary_path <- paste0(binary_path, ".exe")
 }
 
+binary_failed <- FALSE
 if (file.exists(binary_path)) {
   message("Found compiled CTW binary. Using it for faster calculation.")
   # Run binary: <input> <output> <window_size>
@@ -27,6 +28,7 @@ if (file.exists(binary_path)) {
   if (exit_code == 0) {
     quit(save = "no", status = 0)
   } else {
+    binary_failed <- TRUE
     warning("Binary execution failed. Falling back to R package.")
   }
 }
@@ -34,6 +36,9 @@ if (file.exists(binary_path)) {
 # Load libraries
 suppressMessages({library(Biostrings)})
 if (!require("BCT", quietly = TRUE)) {
+  if (binary_failed) {
+    stop("BCT package not installed and ctw-calc exists but failed to execute. Recompile ctw-calc for this system or install BCT.")
+  }
   stop("BCT package not installed and ctw-calc binary not found. Please install BCT or compile the C++ alternative.")
 }
 suppressMessages({library(BCT)})

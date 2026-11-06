@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=CAP
+Comment=Centromere Analysis Pipeline
+Exec=cap
+Icon=cap
+Terminal=true
+Categories=Science;

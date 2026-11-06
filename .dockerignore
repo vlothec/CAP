@@ -1,0 +1,25 @@
+.git
+.nextflow
+.nextflow.log*
+work
+work_*
+results
+results_*
+
+# Generated local release/test artifacts must never enter the OCI context.
+/build
+/dist
+
+# The image must compile this from tracked source.
+bin/ctw-calc
+
+# TRASH_2 carries Windows-only MAFFT/HMMER bundles and historical outputs.
+# Linux images use the exact locked Conda MAFFT/HMMER packages instead.
+modules/TRASH_2/dep/hmmer
+modules/TRASH_2/dep/mafft-7.520-win64-signed
+modules/TRASH_2/dep/new.hor
+modules/TRASH_2/temp
+
+# Local/editor files.
+*.swp
+*~

@@ -19,6 +19,8 @@ tes_filtered_csv <- if (args[5] != "NO_FILE") args[5] else no_edta <- TRUE
 genes_filtered_csv <- if (args[6] != "NO_FILE") args[6] else no_heli <- TRUE
 output_centromeric_scores <- args[7]
 
+# Stabilize random repeat subsampling across runs.
+set.seed(0)
 
 # Load libraries
 suppressMessages({library(seqinr)
@@ -63,14 +65,15 @@ if(nrow(genome_classes_data) == 0) {
 
 # Load optionals if provided
 # print("load edta")
-if (!no_edta) edta <- read.csv(tes_filtered_csv)
+if (!no_edta) {
+  edta <- read.csv(tes_filtered_csv)
+  if (length(edta) == 0 || nrow(edta) == 0) no_edta <- TRUE
+}
 # print("load genes")
-if (!no_heli) genes <- read.csv(genes_filtered_csv)
-
-if(length(edta) == 0) no_edta <- TRUE
-if(length(genes) == 0) no_heli <- TRUE
-if(nrow(edta) == 0) no_edta <- TRUE
-if(nrow(genes) == 0) no_heli <- TRUE
+if (!no_heli) {
+  genes <- read.csv(genes_filtered_csv)
+  if (length(genes) == 0 || nrow(genes) == 0) no_heli <- TRUE
+}
 
 
 # Score

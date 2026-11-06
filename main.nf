@@ -3,18 +3,6 @@ nextflow.enable.dsl = 2
 
 
 
-// ────────────────────── PARAMETERS ──────────────────────
-params.assembly = null
-params.templates = null
-params.te_gff = null
-params.gene_gff = null
-params.metadata = null
-params.cores = 1
-params.max_rep_size = 200
-params.outdir = "./results"
-params.TRASH2 = null   // <-- new: directory containing TRASH2 output files (full paths)
-params.trash2 = null   // <-- accept lower-case variant too
-
 // ────────────────── CHECK DEPENDANCIES ──────────────────
 process CHECK_DEPS {
     tag "check nhmmer and mafft availability"
@@ -63,6 +51,7 @@ process TRASH2 {
     Rscript ${workflow.projectDir}/modules/TRASH_2/src/TRASH.R -f ${assembly} -o \$PWD \
         --cores_no ${task.cpus} \
         --max_rep_size ${params.max_rep_size} \
+        --min_rep_size ${params.min_rep_size} \
         ${t}
     """
 }
@@ -281,60 +270,39 @@ Required:
   --assembly <path> Genome assembly in FASTA format
 
 Optional:
-  --te_gff <path>   EDTA TE annotation (GFF3)
-  --gene_gff <path> Helixer gene annotation (GFF)
-  --trash2 <dir>    Use precomputed TRASH2 outputs stored in <dir> (skip TRASH2 execution)
-  --cores <int>     Number of CPU cores [default: ${params.cores}]
-  --outdir <path>   Output directory [default: ${params.outdir}]
-  --max_rep_size <int> Maximum repeat size for TRASH [default: ${params.max_rep_size}]
+  --te_gff <path>       EDTA TE annotation (GFF3)
+  --gene_gff <path>     Helixer gene annotation (GFF)
+  --metadata <path>     Existing chromosome metadata CSV
+  --templates <path>    Repeat-template FASTA passed to TRASH_2
+  --trash2 <dir>        Precomputed TRASH_2 output directory
+  --cores <int>         CPU cores [default: ${params.cores}]
+  --outdir <path>       Output directory [default: ${params.outdir}]
+  --max_rep_size <int>  Maximum repeat size [default: ${params.max_rep_size}]
+  --min_rep_size <int>  Minimum repeat size [default: ${params.min_rep_size}]
 
-────────────────────────────────────────────────────────────────────────────────
-                             INSTALLATION & RUN OPTIONS
-────────────────────────────────────────────────────────────────────────────────
-1. DOCKER (not available yet)
-   nextflow run vlothec/CAP -profile docker --assembly data/genome.fasta
+Examples:
+  make run ASSEMBLY=/path/to/genome.fasta
 
-2. CONDA (Local Linux/macOS/Windows)
-   # Setup
-   make install  # or ./setup_conda.sh (Linux/Mac) or .\\setup_conda.ps1 (Windows)
-   
-   # Run
-   conda activate cap-pipeline
-   nextflow run . --assembly data/genome.fasta
+  nextflow run . \\
+    --assembly /path/to/genome.fasta \\
+    --te_gff /path/to/EDTA.gff3 \\
+    --gene_gff /path/to/helixer.gff \\
+    --outdir /path/to/results
 
-3. R + renv (Manual)
-   R -e 'renv::restore()'
-   nextflow run . -profile renv --assembly data/genome.fasta
+  nextflow run . \\
+    --assembly /path/to/genome.fasta \\
+    --trash2 /path/to/precomputed-trash2
 
-────────────────────────────────────────────────────────────────────────────────
-                                   EXAMPLES
-────────────────────────────────────────────────────────────────────────────────
-# Basic run
-nextflow run . --assembly data/genome.fasta
+Key outputs:
+  *_CAP_plot_*.png
+  *_CAP_model.txt
+  *_CAP_repeat_families.csv
+  *_centromeric_scores.csv
+  *_centromeric_scores_predictions.csv
+  *_CAP_Rdata.rds
 
-# With annotations
-nextflow run . \\
-  --assembly data/genome.fasta \\
-  --te_gff data/EDTA.gff3 \\
-  --gene_gff data/helixer.gff
-
-# Using precomputed TRASH2 results
-nextflow run . \\
-  --assembly data/genome.fasta \\
-  --trash2 results/TRASH_output
-
-────────────────────────────────────────────────────────────────────────────────
-                                    OUTPUTS
-────────────────────────────────────────────────────────────────────────────────
-- *_CAP_plot_*.png
-- *_CAP_repeat_families.csv
-- *_centromeric_scores.csv
-- *_predictions.csv
-- *_metadata.csv
-- *_GC.csv
-- *_CTW.csv
-
-See README.md for full details: https://github.com/vlothec/CAP
+See README.md for installation and usage:
+https://github.com/MellifluousJDG/CAP
 """
     println help
     System.exit(0)
@@ -349,9 +317,8 @@ See README.md for full details: https://github.com/vlothec/CAP
     gene_gff_ch = params.gene_gff ? channel.fromPath(params.gene_gff) : channel.value(null)
 
     // ---- TRASH2 chain ----
-    // If user supplied a directory with TRASH2 outputs, skip running TRASH2 and
-    // use the files found there. Accept --TRASH2 or --trash2.
-    def trash2_dir = params.TRASH2 ?: params.trash2
+    // If user supplied a directory with TRASH_2 outputs, skip running TRASH_2.
+    def trash2_dir = params.trash2
     if (trash2_dir) {
         trash_out = assembly_ch.map { assembly ->
             def base = assembly.name

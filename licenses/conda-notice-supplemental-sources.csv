@@ -1,0 +1,14 @@
+package,version,build,source_url,digest_type,expected_digest,source_role
+bioconductor-biocgenerics,0.52.0,r44hdfd78af_3,https://bioconductor.org/packages/3.20/bioc/src/contrib/BiocGenerics_0.52.0.tar.gz,md5,17433e48365e2cb89bc5e59de7ead46b,exact-recipe-source
+bioconductor-biostrings,2.74.0,r44h3df3fcb_1,https://bioconductor.org/packages/3.20/bioc/src/contrib/Archive/Biostrings/Biostrings_2.74.0.tar.gz,md5,9c1fa1b00da834f1dc7c2976af36b00c,exact-recipe-source
+bioconductor-genomeinfodb,1.42.0,r44hdfd78af_2,https://bioconductor.org/packages/3.20/bioc/src/contrib/Archive/GenomeInfoDb/GenomeInfoDb_1.42.0.tar.gz,md5,1ef0130131721e4679be168f42e1736e,exact-recipe-source
+bioconductor-genomeinfodbdata,1.2.13,r44hdfd78af_0,https://depot.galaxyproject.org/software/bioconductor-genomeinfodbdata/bioconductor-genomeinfodbdata_1.2.13_src_all.tar.gz,md5,8798e58b89d84d9fa6a85f2191704668,exact-recipe-source
+bioconductor-genomicranges,1.58.0,r44h3df3fcb_2,https://bioconductor.org/packages/3.20/bioc/src/contrib/GenomicRanges_1.58.0.tar.gz,md5,cca337e05cca2a77511c410397e8d415,exact-recipe-source
+bioconductor-iranges,2.40.0,r44h3df3fcb_2,https://bioconductor.org/packages/3.20/bioc/src/contrib/Archive/IRanges/IRanges_2.40.0.tar.gz,md5,bc5e6f78cb6689f381db95d356128872,exact-recipe-source
+bioconductor-s4vectors,0.44.0,r44h3df3fcb_2,https://bioconductor.org/packages/3.20/bioc/src/contrib/S4Vectors_0.44.0.tar.gz,md5,6f87d627de90deccd2bc907b36d6d75d,exact-recipe-source
+bioconductor-ucsc.utils,1.2.0,r44h9ee0642_1,https://bioconductor.org/packages/3.20/bioc/src/contrib/UCSC.utils_1.2.0.tar.gz,md5,ab12a0427231a9578aba56dc73049730,exact-recipe-source
+bioconductor-xvector,0.46.0,r44h15a9599_2,https://bioconductor.org/packages/3.20/bioc/src/contrib/XVector_0.46.0.tar.gz,md5,038527773e20903db8e40a7cfa44ab27,exact-recipe-source
+font-ttf-inconsolata,3.000,h77eed37_0,https://github.com/googlefonts/Inconsolata/archive/refs/tags/v3.000.tar.gz,sha256,f2d8d8ba6caa785a966ef17996822ab14ba91ec423431a29e1b6c4b14bc4cda5,exact-recipe-source
+libsqlite,3.53.4,h13e7031_1,https://www.sqlite.org/2026/sqlite-autoconf-3530400.tar.gz,sha256,0e9483900e92cd5de8fd48d16bf9200145a61f7fd5be542a5ac81d8a9516eb9c,exact-recipe-source
+nextflow,26.04.6,h2a3209d_1,https://github.com/nextflow-io/nextflow/releases/download/v26.04.6/nextflow,sha256,61a755edbed743cfbb568f3a6c67af68481a2f6a4d6dffcc4295e51318968281,exact-recipe-source
+nextflow,26.04.6,h2a3209d_1,https://github.com/nextflow-io/nextflow/archive/refs/tags/v26.04.6.tar.gz,sha256,485c4413948ddffce2bff02d8df63f6d5bbd88f7fd9c1a63d3a65a3cc8301b19,supplemental-tag-source

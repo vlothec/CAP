@@ -1,0 +1,72 @@
+#!/bin/bash
+
+set -euo pipefail
+
+PREFIX="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+R_HOME="$PREFIX/lib/R"
+R_EXEC="$R_HOME/bin/exec/R"
+
+export R_HOME R_HOME_DIR="$R_HOME"
+export R_SHARE_DIR="$R_HOME/share"
+export R_INCLUDE_DIR="$R_HOME/include"
+export R_DOC_DIR="$R_HOME/doc"
+export R_DEFAULT_PACKAGES="${R_SCRIPT_DEFAULT_PACKAGES:-datasets,utils,grDevices,graphics,stats}"
+
+case "${1:-}" in
+    --help)
+        cat <<'EOF'
+Usage: Rscript [options] file [args]
+   or: Rscript [options] -e expr [-e expr2 ...] [args]
+A relocatable front-end to R for the CAP AppImage.
+EOF
+        exit 0
+        ;;
+    --version)
+        exec "$R_EXEC" --version
+        ;;
+esac
+
+r_options=(--no-echo --no-restore)
+expressions=()
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -e)
+            [ "$#" -ge 2 ] || {
+                echo "Rscript: -e not followed by an expression" >&2
+                exit 1
+            }
+            expressions+=("-e" "$2")
+            shift 2
+            ;;
+        --default-packages=*)
+            export R_DEFAULT_PACKAGES="${1#*=}"
+            shift
+            ;;
+        --verbose)
+            set -x
+            shift
+            ;;
+        --*)
+            r_options+=("$1")
+            shift
+            ;;
+        -*)
+            r_options+=("$1")
+            shift
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+if [ "${#expressions[@]}" -gt 0 ]; then
+    exec "$R_EXEC" "${r_options[@]}" "${expressions[@]}" --args "$@"
+fi
+[ "$#" -gt 0 ] || {
+    echo "Rscript: file name is missing" >&2
+    exit 1
+}
+script=$1
+shift
+exec "$R_EXEC" "${r_options[@]}" "--file=$script" --args "$@"

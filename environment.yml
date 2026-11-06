@@ -27,8 +27,8 @@ dependencies:
   - pandas
   - numpy
   - joblib
-  - xgboost
-  - scikit-learn
+  - xgboost=3.0.5
+  - scikit-learn=1.7.2
   
   # Bioinformatics tools
   - mafft
@@ -44,6 +44,10 @@ dependencies:
   - make
   - c-compiler
   - cxx-compiler
+  # Build against an older Linux userspace so ctw-calc runs on glibc 2.28+
+  # systems as well as newer distributions.
+  - sysroot_linux-64=2.28
+  - kernel-headers_linux-64=4.18
   - gsl
   - libblas
   - liblapack

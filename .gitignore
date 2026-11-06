@@ -10,11 +10,20 @@ work/
 !.Rprofile
 !renv/activate.R
 
-# ───── Nextflow ─────
+# ───── Nextflow and CAP runs ─────
 .work/
+work/
+work_*/
 results/
+results_*/
 .nextflow/
 .nextflow.log*
+.nextflow-history
+trace*.txt
+report*.html
+timeline*.html
+dag*.html
+dag*.dot
 .vscode/
 
 # ───── OS / IDE ─────
@@ -31,6 +40,7 @@ Thumbs.db
 .Renviron
 
 # ───── Build artefacts ─────
+/bin/ctw-calc
 *.tar.gz
 *.Rcheck/
 docs/
@@ -39,3 +49,6 @@ rsconnect/
 cache/
 *.utf8.md
 *.knit.md
+/build/appimage/
+/dist/*.AppImage
+/dist/*.AppImage.sha256

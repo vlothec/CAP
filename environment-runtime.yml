@@ -1,0 +1,48 @@
+# Runtime-only environment for the OCI image.
+#
+# Keep this separate from environment.yml: the latter remains the supported
+# development/host environment and includes compilers and build tools. CTW/BCT
+# is compiled in the Dockerfile's separate Debian build stage.
+name: cap-runtime
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  # Core R and R packages
+  - r-base=4.4
+  - r-seqinr
+  - r-stringr
+  - r-stringdist
+  - r-scales
+  - r-ape
+  - r-doparallel
+  - r-getopt
+  - r-renv
+  - bioconductor-biostrings
+  - bioconductor-genomicranges
+  - bioconductor-iranges
+  - bioconductor-msa
+
+  # Python and data science
+  - python=3.11
+  - pandas
+  - numpy
+  - joblib
+  - xgboost=3.0.5
+  - scikit-learn=1.7.2
+
+  # Bioinformatics and workflow runtime
+  - mafft
+  - hmmer
+  # The locked HMMER build links to libmpi.so.40 at runtime.
+  - mpi=1.0=openmpi
+  - openmpi
+  - nextflow
+  - openjdk=17
+
+  # Numerical/runtime libraries used by the resolved R/Python stack
+  - gsl
+  - libblas
+  - liblapack
+  - glpk
